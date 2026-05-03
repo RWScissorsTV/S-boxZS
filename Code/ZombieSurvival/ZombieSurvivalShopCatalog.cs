@@ -235,7 +235,7 @@ public static class ZombieSurvivalShopCatalog
 		return All.Where( x => string.Equals( x.Category, category, StringComparison.OrdinalIgnoreCase ) );
 	}
 
-	public static ZombieSurvivalShopItem? Find( string id )
+	public static ZombieSurvivalShopItem Find( string id )
 	{
 		if ( string.IsNullOrWhiteSpace( id ) )
 			return null;

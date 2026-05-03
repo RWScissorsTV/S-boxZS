@@ -14,36 +14,31 @@
 }
 
 <div class="zs-hud">
-	<div class="zs-hud__top">
-		<div class="zs-hud__phase">@PhaseText</div>
-		<div class="zs-hud__timer">@TimerText</div>
+	<div class="primary">
+		<div class="phase">@PhaseText</div>
+		<div class="timer">@TimerText</div>
 	</div>
 
-	<div class="zs-hud__role @RoleClass">
-		@RoleText
+	<div class="secondary">
+		<div class="role @RoleClass">@RoleText</div>
+		<div class="objective">@ObjectiveText</div>
 	</div>
 
-	<div class="zs-hud__objective">
-		@ObjectiveText
-	</div>
-
-	<div class="zs-hud__counts">
-		<span>@game.HumanCount humans</span>
-		<span>@game.ZombieCount zombies</span>
+	<div class="counts">
+		<label>@game.HumanCount humans</label>
+		<label>@game.ZombieCount zombies</label>
 	</div>
 
 	@if ( data.ZombieSurvivalRole == ZombieSurvivalRole.Human )
 	{
-		<div class="zs-hud__coins">
-			@data.ZombieSurvivalCoins coins
-		</div>
-	}
+		<div class="budget">
+			<label>@data.ZombieSurvivalCoins coins</label>
 
-	@if ( game.Phase == ZombieSurvivalPhase.Build && data.ZombieSurvivalRole == ZombieSurvivalRole.Human )
-	{
-		<div class="zs-hud__build">
-			<div>@data.ZombieSurvivalBuildPoints build points</div>
-			<div>@ZombieSurvivalGame.GetPropSpawnCost() per prop</div>
+			@if ( game.Phase == ZombieSurvivalPhase.Build )
+			{
+				<label>@data.ZombieSurvivalBuildPoints build points</label>
+				<label>@ZombieSurvivalGame.GetPropSpawnCost() per prop</label>
+			}
 		</div>
 	}
 </div>

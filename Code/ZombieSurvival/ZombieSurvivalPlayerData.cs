@@ -9,10 +9,6 @@ public sealed partial class PlayerData
 	[Sync( SyncFlags.FromHost )]
 	public ZombieSurvivalForm ZombieSurvivalForm { get; set; } = ZombieSurvivalForm.None;
 
-	/// <summary>
-	/// The zombie form the player wants to use next time they are assigned/spawned as a zombie.
-	/// This lets the menu selection wait until the proper respawn/death moment instead of instantly swapping models.
-	/// </summary>
 	[Sync( SyncFlags.FromHost )]
 	public ZombieSurvivalForm ZombieSurvivalRequestedForm { get; set; } = ZombieSurvivalForm.Walker;
 
@@ -22,10 +18,6 @@ public sealed partial class PlayerData
 	[Sync( SyncFlags.FromHost )]
 	public int ZombieSurvivalBuildPoints { get; set; }
 
-	/// <summary>
-	/// Human buy-menu currency.
-	/// Keep this separate from sandbox/base stats so ZS economy does not interfere with the base game.
-	/// </summary>
 	[Sync( SyncFlags.FromHost )]
 	public int ZombieSurvivalCoins { get; set; }
 

@@ -6,7 +6,9 @@ using Sandbox;
 using Sandbox.UI;
 
 public sealed class ZombieSurvivalGame : GameObjectSystem, Global.IPlayerEvents, Global.ISpawnEvents, IToolActionEvents
+
 {
+	public static ZombieSurvivalGame Current { get; private set; }
 	[ConVar( "zs.enabled", ConVarFlags.Replicated | ConVarFlags.Server | ConVarFlags.GameSetting )]
 	public static bool Enabled { get; set; } = true;
 
@@ -87,6 +89,7 @@ public sealed class ZombieSurvivalGame : GameObjectSystem, Global.IPlayerEvents,
 
 	public ZombieSurvivalGame( Scene scene ) : base( scene )
 	{
+		Current = this;
 		Listen( Stage.StartUpdate, 20, Tick, "ZombieSurvivalGame" );
 	}
 
@@ -427,7 +430,7 @@ public sealed class ZombieSurvivalGame : GameObjectSystem, Global.IPlayerEvents,
 
 	private void PostSystemText( string message )
 	{
-		Scene.GetSystem<Chat>()?.AddSystemText( message, "info" );
+		Scene.Get<Chat>()?.AddSystemText( message, "info" );
 	}
 
 	private static void GrantBuildPoints( PlayerData data )
