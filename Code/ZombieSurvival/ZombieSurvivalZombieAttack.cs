@@ -26,13 +26,6 @@ public sealed class ZombieSurvivalZombieAttack : Component
 	private GameObject _firstPersonViewModel;
 	private ViewModel _firstPersonViewModelController;
 	private ZombieSurvivalFirstPersonPunchViewModel _firstPersonPunchViewModel;
-	private bool _hasLocalDefaultControllerShape;
-	private float _localDefaultBodyHeight = 72f;
-	private float _localDefaultBodyRadius = 16f;
-	private float _localDefaultDuckedHeight = 36f;
-	private float _localDefaultEyeDistanceFromTop = 8f;
-	private Vector3 _localDefaultCameraOffset = new( 96f, 0f, -4f );
-	private float _localDefaultReachLength = 130f;
 
 	protected override void OnStart()
 	{
@@ -41,7 +34,6 @@ public sealed class ZombieSurvivalZombieAttack : Component
 
 	protected override void OnUpdate()
 	{
-		ApplyLocalHeadcrabControllerShape();
 		UpdateFirstPersonViewModel();
 
 		if ( IsProxy )
@@ -62,13 +54,11 @@ public sealed class ZombieSurvivalZombieAttack : Component
 
 	protected override void OnDisabled()
 	{
-		RestoreLocalControllerShape();
 		DestroyFirstPersonViewModel();
 	}
 
 	protected override void OnDestroy()
 	{
-		RestoreLocalControllerShape();
 		DestroyFirstPersonViewModel();
 	}
 
@@ -96,58 +86,6 @@ public sealed class ZombieSurvivalZombieAttack : Component
 			return false;
 
 		return true;
-	}
-
-	private void ApplyLocalHeadcrabControllerShape()
-	{
-		var player = GetComponent<Player>();
-		if ( !player.IsValid() || !player.IsLocalPlayer || !player.PlayerData.IsValid() || !player.Controller.IsValid() )
-			return;
-
-		var controller = player.Controller;
-		if ( !_hasLocalDefaultControllerShape )
-		{
-			_localDefaultBodyHeight = controller.BodyHeight;
-			_localDefaultBodyRadius = controller.BodyRadius;
-			_localDefaultDuckedHeight = controller.DuckedHeight;
-			_localDefaultEyeDistanceFromTop = controller.EyeDistanceFromTop;
-			_localDefaultCameraOffset = controller.CameraOffset;
-			_localDefaultReachLength = controller.ReachLength;
-			_hasLocalDefaultControllerShape = true;
-		}
-
-		var isHeadcrab =
-			player.PlayerData.ZombieSurvivalRole == ZombieSurvivalRole.Zombie
-			&& player.PlayerData.ZombieSurvivalForm == ZombieSurvivalForm.Headcrab;
-
-		if ( isHeadcrab )
-		{
-			var definition = ZombieSurvivalFormCatalog.Get( ZombieSurvivalForm.Headcrab );
-			controller.BodyHeight = definition.BodyHeight;
-			controller.BodyRadius = definition.BodyRadius;
-			controller.DuckedHeight = definition.DuckedHeight;
-			controller.EyeDistanceFromTop = definition.EyeDistanceFromTop;
-			controller.CameraOffset = definition.CameraOffset;
-			controller.ReachLength = definition.ReachLength;
-			return;
-		}
-
-		RestoreLocalControllerShape();
-	}
-
-	private void RestoreLocalControllerShape()
-	{
-		var player = GetComponent<Player>();
-		if ( !player.IsValid() || !player.IsLocalPlayer || !player.Controller.IsValid() || !_hasLocalDefaultControllerShape )
-			return;
-
-		var controller = player.Controller;
-		controller.BodyHeight = _localDefaultBodyHeight;
-		controller.BodyRadius = _localDefaultBodyRadius;
-		controller.DuckedHeight = _localDefaultDuckedHeight;
-		controller.EyeDistanceFromTop = _localDefaultEyeDistanceFromTop;
-		controller.CameraOffset = _localDefaultCameraOffset;
-		controller.ReachLength = _localDefaultReachLength;
 	}
 
 	private void RequestAttack()
