@@ -71,10 +71,24 @@ public static class ZombieSurvivalShopCatalog
 
 		new()
 		{
+			Id = "hammer",
+			DisplayName = "Hammer",
+			Description = "Nail and repair barricades. Light damage against zombies.",
+			Cost = 0,
+			Type = ZombieSurvivalShopItemType.Weapon,
+			Category = "Melee",
+			SortOrder = 15,
+			ClassName = "HammerWeapon",
+			ResourcePath = "weapons/Hammer/hammer.prefab",
+			PreviewPath = "weapons/Hammer/hammer.prefab"
+		},
+
+		new()
+		{
 			Id = "glock",
 			DisplayName = "Glock",
 			Description = "Cheap pistol for early survival.",
-			Cost = 25,
+			Cost = 0,
 			Type = ZombieSurvivalShopItemType.Weapon,
 			Category = "Pistols",
 			SortOrder = 20,
@@ -88,7 +102,7 @@ public static class ZombieSurvivalShopCatalog
 			Id = "colt1911",
 			DisplayName = "Colt 1911",
 			Description = "Stronger pistol with better stopping power.",
-			Cost = 45,
+			Cost = 0,
 			Type = ZombieSurvivalShopItemType.Weapon,
 			Category = "Pistols",
 			SortOrder = 30,
@@ -102,7 +116,7 @@ public static class ZombieSurvivalShopCatalog
 			Id = "mp5",
 			DisplayName = "MP5",
 			Description = "Fast-firing SMG for close to mid range.",
-			Cost = 90,
+			Cost = 0,
 			Type = ZombieSurvivalShopItemType.Weapon,
 			Category = "SMGs",
 			SortOrder = 40,
@@ -116,7 +130,7 @@ public static class ZombieSurvivalShopCatalog
 			Id = "shotgun",
 			DisplayName = "Shotgun",
 			Description = "Heavy close-range damage.",
-			Cost = 110,
+			Cost = 0,
 			Type = ZombieSurvivalShopItemType.Weapon,
 			Category = "Shotguns",
 			SortOrder = 50,
@@ -130,7 +144,7 @@ public static class ZombieSurvivalShopCatalog
 			Id = "m4a1",
 			DisplayName = "M4A1",
 			Description = "Reliable rifle for sustained defense.",
-			Cost = 150,
+			Cost = 0,
 			Type = ZombieSurvivalShopItemType.Weapon,
 			Category = "Rifles",
 			SortOrder = 60,
@@ -144,7 +158,7 @@ public static class ZombieSurvivalShopCatalog
 			Id = "sniper",
 			DisplayName = "Sniper",
 			Description = "Long-range precision weapon.",
-			Cost = 175,
+			Cost = 0,
 			Type = ZombieSurvivalShopItemType.Weapon,
 			Category = "Rifles",
 			SortOrder = 70,
@@ -158,7 +172,7 @@ public static class ZombieSurvivalShopCatalog
 			Id = "grenade",
 			DisplayName = "Grenade",
 			Description = "Throwable explosive.",
-			Cost = 60,
+			Cost = 0,
 			Type = ZombieSurvivalShopItemType.Weapon,
 			Category = "Explosives",
 			SortOrder = 80,
@@ -171,8 +185,8 @@ public static class ZombieSurvivalShopCatalog
 		{
 			Id = "rpg",
 			DisplayName = "RPG",
-			Description = "Expensive explosive weapon. Use carefully.",
-			Cost = 250,
+			Description = "Heavy explosive weapon.",
+			Cost = 0,
 			Type = ZombieSurvivalShopItemType.Weapon,
 			Category = "Heavy",
 			SortOrder = 90,
@@ -180,93 +194,6 @@ public static class ZombieSurvivalShopCatalog
 			ResourcePath = "weapons/Rpg/rpg.prefab",
 			PreviewPath = "weapons/Rpg/rpg.prefab"
 		},
-
-		// Disabled until ammo purchasing is wired.
-		new()
-		{
-			Id = "pistol_ammo",
-			DisplayName = "Pistol Ammo",
-			Description = "Ammo pack for pistols.",
-			Cost = 15,
-			Type = ZombieSurvivalShopItemType.Ammo,
-			Category = "Ammo",
-			SortOrder = 100,
-			ResourcePath = "ammo/pistol",
-			PreviewPath = "ammo/pistol",
-			IsEnabled = false
-		},
-
-		new()
-		{
-			Id = "smg_ammo",
-			DisplayName = "SMG Ammo",
-			Description = "Ammo pack for SMGs.",
-			Cost = 25,
-			Type = ZombieSurvivalShopItemType.Ammo,
-			Category = "Ammo",
-			SortOrder = 110,
-			ResourcePath = "ammo/smg",
-			PreviewPath = "ammo/smg",
-			IsEnabled = false
-		},
-
-		new()
-		{
-			Id = "rifle_ammo",
-			DisplayName = "Rifle Ammo",
-			Description = "Ammo pack for rifles.",
-			Cost = 35,
-			Type = ZombieSurvivalShopItemType.Ammo,
-			Category = "Ammo",
-			SortOrder = 120,
-			ResourcePath = "ammo/rifle",
-			PreviewPath = "ammo/rifle",
-			IsEnabled = false
-		},
-
-		new()
-		{
-			Id = "shotgun_ammo",
-			DisplayName = "Shotgun Ammo",
-			Description = "Ammo pack for shotguns.",
-			Cost = 30,
-			Type = ZombieSurvivalShopItemType.Ammo,
-			Category = "Ammo",
-			SortOrder = 130,
-			ResourcePath = "ammo/shotgun",
-			PreviewPath = "ammo/shotgun",
-			IsEnabled = false
-		},
-
-		// Disabled until medical item behavior exists.
-		new()
-		{
-			Id = "medkit",
-			DisplayName = "Medkit",
-			Description = "Restores health.",
-			Cost = 50,
-			Type = ZombieSurvivalShopItemType.Medical,
-			Category = "Medical",
-			SortOrder = 140,
-			ResourcePath = "items/medkit",
-			PreviewPath = "items/medkit",
-			IsEnabled = false
-		},
-
-		// Disabled until repair/fortify tool behavior exists.
-		new()
-		{
-			Id = "repair_tool",
-			DisplayName = "Repair Tool",
-			Description = "Repairs and fortifies barricades.",
-			Cost = 75,
-			Type = ZombieSurvivalShopItemType.Utility,
-			Category = "Tools",
-			SortOrder = 150,
-			ResourcePath = "tools/repair",
-			PreviewPath = "tools/repair",
-			IsEnabled = false
-		}
 	};
 
 	public static IEnumerable<ZombieSurvivalShopItem> All =>
@@ -328,9 +255,6 @@ public static class ZombieSurvivalShopCatalog
 			"Rifles" => 50,
 			"Explosives" => 60,
 			"Heavy" => 70,
-			"Ammo" => 80,
-			"Tools" => 90,
-			"Medical" => 100,
 			_ => 1000
 		};
 	}

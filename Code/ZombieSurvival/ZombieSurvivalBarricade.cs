@@ -1,19 +1,24 @@
 using System;
+using System.Collections.Generic;
 
 public sealed class ZombieSurvivalBarricade : Component, Component.IDamageable, Component.IPressable
 {
 	public const string RoundPropTag = "zs_round_prop";
 	public const string BarricadeTag = "zs_barricade";
+	public const string NailTag = "zs_nail";
 
 	[Property] public float StartingHealth { get; set; } = 150f;
 	[Property] public float MaxFortifiedHealth { get; set; } = 225f;
 	[Property] public float RepairAmount { get; set; } = 25f;
 	[Property] public float FortifyAmount { get; set; } = 15f;
 	[Property] public float RepairCooldown { get; set; } = 0.35f;
+	[Property] public float NailHealth { get; set; } = 25f;
+	[Property] public int MaxNails { get; set; } = 4;
 
 	[Property, Sync( SyncFlags.FromHost )] public float Health { get; private set; }
 	[Property, Sync( SyncFlags.FromHost )] public float MaxHealth { get; private set; }
 	[Property, Sync( SyncFlags.FromHost )] public bool IsBroken { get; private set; }
+	[Property, Sync( SyncFlags.FromHost )] public int NailCount { get; private set; }
 
 	[Property] public SoundEvent ImpactSound { get; set; }
 	[Property] public SoundEvent BreakSound { get; set; }
@@ -21,6 +26,7 @@ public sealed class ZombieSurvivalBarricade : Component, Component.IDamageable, 
 	[Property] public SoundEvent FortifySound { get; set; }
 
 	private TimeUntil _repairCooldown;
+	private readonly List<GameObject> _nails = new();
 
 	protected override void OnStart()
 	{
@@ -34,8 +40,9 @@ public sealed class ZombieSurvivalBarricade : Component, Component.IDamageable, 
 			return;
 
 		MaxHealth = MathF.Max( StartingHealth, 1f );
-		MaxFortifiedHealth = MathF.Max( MaxFortifiedHealth, MaxHealth );
+		MaxFortifiedHealth = MaxHealth;
 		Health = MaxHealth;
+		NailCount = 0;
 		IsBroken = false;
 		GameObject.Tags.Add( RoundPropTag );
 		GameObject.Tags.Add( BarricadeTag );
@@ -73,13 +80,13 @@ public sealed class ZombieSurvivalBarricade : Component, Component.IDamageable, 
 		if ( !CanHumanInteract( e.Source.GameObject ) )
 			return new IPressable.Tooltip( "Barricade", "construction", healthText );
 
-		if ( Health < MaxHealth )
-			return new IPressable.Tooltip( "Repair", "construction", healthText );
+		if ( NailCount > 0 )
+			return new IPressable.Tooltip( "Nailed", "construction", $"Nails {NailCount}/{MaxNails} - {healthText}" );
 
-		if ( MaxHealth < MaxFortifiedHealth )
-			return new IPressable.Tooltip( "Fortify", "construction", healthText );
+		if ( ZombieSurvivalPropCarrySystem.IsLocalCarrying( GameObject ) )
+			return new IPressable.Tooltip( "Place", "open_with", $"Nails {NailCount}/{MaxNails}" );
 
-		return new IPressable.Tooltip( "Fortified", "check", healthText );
+		return new IPressable.Tooltip( "Pick up", "open_with", $"Nails {NailCount}/{MaxNails} - {healthText}" );
 	}
 
 	bool IPressable.CanPress( IPressable.Event e )
@@ -90,12 +97,13 @@ public sealed class ZombieSurvivalBarricade : Component, Component.IDamageable, 
 		if ( !CanHumanInteract( e.Source.GameObject ) )
 			return false;
 
-		return Health < MaxHealth || MaxHealth < MaxFortifiedHealth;
+		return NailCount <= 0;
 	}
 
 	bool IPressable.Press( IPressable.Event e )
 	{
-		RepairOrFortify( e.Source.GameObject );
+		ZombieSurvivalPropCarrySystem.ToggleCarryLocal( this, e.Source.GameObject );
+		ToggleCarry( e.Source.GameObject );
 		return true;
 	}
 
@@ -121,6 +129,7 @@ public sealed class ZombieSurvivalBarricade : Component, Component.IDamageable, 
 		if ( BreakSound.IsValid() )
 			PlayBreakEffects( WorldPosition );
 
+		DestroyNails();
 		GameObject.Tags.Remove( BarricadeTag );
 		GameObject.Tags.Remove( "barricade" );
 
@@ -128,39 +137,80 @@ public sealed class ZombieSurvivalBarricade : Component, Component.IDamageable, 
 	}
 
 	[Rpc.Host]
-	private void RepairOrFortify( GameObject presserObject )
+	private void ToggleCarry( GameObject presserObject )
 	{
 		if ( !Networking.IsHost )
 			return;
 
-		if ( _repairCooldown > 0f )
+		if ( IsBroken || !CanHumanInteract( presserObject, Rpc.Caller ) )
 			return;
 
-		if ( IsBroken || !CanHumanInteract( presserObject ) )
+		if ( NailCount > 0 )
 			return;
 
-		var fortified = false;
-		if ( Health < MaxHealth )
-		{
-			Health = MathF.Min( Health + MathF.Max( RepairAmount, 0f ), MaxHealth );
-		}
-		else if ( MaxHealth < MaxFortifiedHealth )
-		{
-			var amount = MathF.Max( FortifyAmount, 0f );
-			MaxHealth = MathF.Min( MaxHealth + amount, MaxFortifiedHealth );
-			Health = MathF.Min( Health + amount, MaxHealth );
-			fortified = true;
-		}
-		else
-		{
-			return;
-		}
-
-		_repairCooldown = MathF.Max( RepairCooldown, 0.05f );
-		PlayRepairEffects( fortified );
+		ZombieSurvivalPropCarrySystem.ToggleCarryHost( Rpc.Caller, GameObject );
 	}
 
-	private bool CanHumanInteract( GameObject source )
+	public bool CanHammerRepair( GameObject source, float range )
+	{
+		if ( IsBroken || !CanHumanInteract( source ) )
+			return false;
+
+		if ( NailCount <= 0 || Health >= MaxHealth )
+			return false;
+
+		var player = GetSourcePlayer( source );
+		return player.IsValid() && GetDistanceFromPlayer( player ) <= MathF.Max( range, 0f );
+	}
+
+	[Rpc.Host]
+	public void RepairWithHammer( GameObject source, float range )
+	{
+		if ( !Networking.IsHost )
+			return;
+
+		if ( _repairCooldown > 0f || !CanHammerRepair( source, range ) )
+			return;
+
+		Health = MathF.Min( Health + MathF.Max( RepairAmount, 0f ), MaxHealth );
+		_repairCooldown = MathF.Max( RepairCooldown, 0.05f );
+		PlayRepairEffects( false );
+	}
+
+	[Rpc.Host]
+	public void AddHammerNail( GameObject source, GameObject target, Vector3 propPoint, Vector3 targetPoint )
+	{
+		if ( !Networking.IsHost )
+			return;
+
+		if ( IsBroken || !CanHumanInteract( source ) )
+			return;
+
+		if ( NailCount >= MaxNails )
+		{
+			SendNotice( source, "Max nails reached." );
+			return;
+		}
+
+		var targetRoot = target.IsValid()
+			? target.Network.RootGameObject ?? target
+			: null;
+
+		if ( targetRoot == GameObject || targetRoot == GameObject.Root )
+			return;
+
+		CreateNailConstraint( targetRoot, propPoint, targetPoint );
+		FreezePropHost();
+
+		NailCount++;
+		var amount = MathF.Max( NailHealth, 0f );
+		MaxHealth = MathF.Max( MaxHealth + amount, StartingHealth );
+		Health = MathF.Min( Health + amount, MaxHealth );
+
+		PlayRepairEffects( true );
+	}
+
+	private bool CanHumanInteract( GameObject source, Connection fallbackConnection = null )
 	{
 		var game = ZombieSurvivalGame.Current;
 		if ( game is null )
@@ -170,6 +220,15 @@ public sealed class ZombieSurvivalBarricade : Component, Component.IDamageable, 
 			return false;
 
 		var player = GetSourcePlayer( source );
+		if ( !player.IsValid() && fallbackConnection is not null )
+			player = Player.FindForConnection( fallbackConnection );
+
+		if ( !player.IsValid() && !Networking.IsHost )
+			player = Player.FindLocalPlayer();
+
+		if ( !player.IsValid() && Networking.IsHost && Connection.Local is not null )
+			player = Player.FindForConnection( Connection.Local );
+
 		if ( !player.IsValid() || !player.PlayerData.IsValid() )
 			return false;
 
@@ -177,12 +236,100 @@ public sealed class ZombieSurvivalBarricade : Component, Component.IDamageable, 
 			&& player.PlayerData.ZombieSurvivalRole == ZombieSurvivalRole.Human;
 	}
 
+	public bool CanHammerNail( GameObject source )
+	{
+		return !IsBroken
+			&& CanHumanInteract( source )
+			&& NailCount < MaxNails;
+	}
+
+	private void CreateNailConstraint( GameObject targetRoot, Vector3 propPoint, Vector3 targetPoint )
+	{
+		var propAnchor = new GameObject( false, "zs_nail" );
+		propAnchor.Tags.Add( NailTag );
+		propAnchor.Parent = GameObject;
+		propAnchor.WorldPosition = propPoint;
+		propAnchor.WorldRotation = Rotation.Identity;
+
+		var targetAnchor = new GameObject( false, "zs_nail_anchor" );
+		targetAnchor.Tags.Add( NailTag );
+
+		if ( targetRoot.IsValid() )
+			targetAnchor.Parent = targetRoot;
+
+		targetAnchor.WorldPosition = targetPoint;
+		targetAnchor.WorldRotation = Rotation.Identity;
+
+		var cleanup = propAnchor.AddComponent<ConstraintCleanup>();
+		cleanup.Attachment = targetAnchor;
+
+		var joint = propAnchor.AddComponent<FixedJoint>();
+		joint.Attachment = Joint.AttachmentMode.Auto;
+		joint.Body = targetAnchor;
+		joint.EnableCollision = true;
+		joint.AngularFrequency = 10;
+		joint.LinearFrequency = 10;
+
+		targetAnchor.NetworkSpawn();
+		propAnchor.NetworkSpawn();
+
+		_nails.Add( propAnchor );
+	}
+
+	private void FreezePropHost()
+	{
+		if ( !Networking.IsHost )
+			return;
+
+		var body = GameObject.GetComponent<Rigidbody>();
+		if ( !body.IsValid() )
+			return;
+
+		body.MotionEnabled = false;
+		body.Velocity = Vector3.Zero;
+		body.AngularVelocity = Vector3.Zero;
+	}
+
+	private void DestroyNails()
+	{
+		foreach ( var nail in _nails.ToArray() )
+		{
+			if ( nail.IsValid() )
+				nail.Destroy();
+		}
+
+		_nails.Clear();
+	}
+
+	private float GetDistanceFromPlayer( Player player )
+	{
+		if ( !player.IsValid() )
+			return float.MaxValue;
+
+		var rb = GameObject.GetComponent<Rigidbody>();
+		if ( rb.IsValid() )
+			return rb.FindClosestPoint( player.EyeTransform.Position ).Distance( player.EyeTransform.Position );
+
+		return WorldPosition.Distance( player.EyeTransform.Position );
+	}
+
+	private static void SendNotice( GameObject source, string text )
+	{
+		var target = GetSourcePlayer( source )?.Network.Owner;
+
+		if ( target is null )
+			return;
+
+		Sandbox.UI.Notices.SendNotice( target, "construction", Color.Red, text, 2 );
+	}
+
 	private static Player GetSourcePlayer( GameObject source )
 	{
 		if ( !source.IsValid() )
 			return null;
 
-		return source.Root.GetComponent<Player>();
+		return source.GetComponentInParent<Player>( true )
+			?? source.Root.GetComponent<Player>();
 	}
 
 	[Rpc.Broadcast]

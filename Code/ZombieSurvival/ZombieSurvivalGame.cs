@@ -63,6 +63,15 @@ public sealed class ZombieSurvivalGame : GameObjectSystem, Global.IPlayerEvents,
 	[ConVar( "zs.barricade_fortify_amount", ConVarFlags.Replicated | ConVarFlags.Server | ConVarFlags.GameSetting )]
 	public static float BarricadeFortifyAmount { get; set; } = 15f;
 
+	[ConVar( "zs.barricade_nail_health", ConVarFlags.Replicated | ConVarFlags.Server | ConVarFlags.GameSetting )]
+	public static float BarricadeNailHealth { get; set; } = 25f;
+
+	[ConVar( "zs.barricade_max_nails", ConVarFlags.Replicated | ConVarFlags.Server | ConVarFlags.GameSetting )]
+	public static int BarricadeMaxNails { get; set; } = 4;
+
+	[ConVar( "zs.barricade_repair_range", ConVarFlags.Replicated | ConVarFlags.Server | ConVarFlags.GameSetting )]
+	public static float BarricadeRepairRange { get; set; } = 96f;
+
 	[ConVar( "zs.build_points_start", ConVarFlags.Replicated | ConVarFlags.Server | ConVarFlags.GameSetting )]
 	public static int StartingBuildPoints { get; set; } = 100;
 
@@ -231,7 +240,6 @@ public sealed class ZombieSurvivalGame : GameObjectSystem, Global.IPlayerEvents,
 			data.ZombieSurvivalForm = ZombieSurvivalForm.None;
 			data.ZombieSurvivalFormVisualScale = 1f;
 			data.ZombieSurvivalAlive = true;
-			data.ZombieSurvivalBuildPoints = 0;
 
 			if ( data.ZombieSurvivalRequestedForm == ZombieSurvivalForm.None )
 				data.ZombieSurvivalRequestedForm = GetDefaultZombieForm();
@@ -733,10 +741,10 @@ public sealed class ZombieSurvivalGame : GameObjectSystem, Global.IPlayerEvents,
 			return;
 		}
 
-		if ( Phase != ZombieSurvivalPhase.Build )
+		if ( Phase != ZombieSurvivalPhase.Build && Phase != ZombieSurvivalPhase.Survival )
 		{
 			e.Cancelled = true;
-			SendBuildNotice( e.Player, "Props can only be placed during build phase." );
+			SendBuildNotice( e.Player, "Props can only be placed during build or survival." );
 			return;
 		}
 
@@ -780,6 +788,8 @@ public sealed class ZombieSurvivalGame : GameObjectSystem, Global.IPlayerEvents,
 			barricade.MaxFortifiedHealth = BarricadeMaxHealth;
 			barricade.RepairAmount = BarricadeRepairAmount;
 			barricade.FortifyAmount = BarricadeFortifyAmount;
+			barricade.NailHealth = BarricadeNailHealth;
+			barricade.MaxNails = Math.Max( BarricadeMaxNails, 0 );
 			barricade.InitializeHost();
 
 			go.Network?.Refresh();
@@ -946,8 +956,17 @@ public sealed class ZombieSurvivalGame : GameObjectSystem, Global.IPlayerEvents,
 		if ( !data.IsValid() )
 			return null;
 
+		if ( data.Connection is { } connection )
+		{
+			var player = Player.FindForConnection( connection );
+			if ( player.IsValid() )
+				return player;
+		}
+
 		return (Scene?.GetAll<Player>() ?? Enumerable.Empty<Player>())
-			.FirstOrDefault( x => x is not null && x.IsValid() && x.PlayerData.IsValid() && x.PlayerData == data );
+			.FirstOrDefault( x => x is not null
+				&& x.IsValid()
+				&& (x.PlayerId == data.PlayerId || x.Network.Owner?.Id == data.PlayerId) );
 	}
 
 	private static string ResolveShopPrefabPath( ZombieSurvivalShopItem item )
