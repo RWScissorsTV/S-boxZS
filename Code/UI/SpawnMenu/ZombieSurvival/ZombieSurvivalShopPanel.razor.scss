@@ -1,27 +1,3 @@
-.zs-shop-browser {
-	width: 100%;
-	height: 100%;
-	flex-direction: column;
-	gap: 8px;
-}
-
-.zs-shop-toolbar {
-	width: 100%;
-	flex-direction: row;
-	gap: 8px;
-	align-items: center;
-	flex-shrink: 0;
-
-	TextEntry {
-		flex-grow: 1;
-		height: 38px;
-		border-radius: 6px;
-		background-color: rgba( 255, 255, 255, 0.06 );
-		padding: 0 12px;
-		color: white;
-	}
-}
-
 .zs-shop-coins {
 	height: 38px;
 	min-width: 92px;
@@ -32,12 +8,15 @@
 	align-items: center;
 	justify-content: center;
 	gap: 8px;
+	padding: 0 10px;
 
 	span {
 		font-size: 10px;
+		font-weight: 800;
 		text-transform: uppercase;
 		letter-spacing: 0.08em;
-		opacity: 0.65;
+		opacity: 0.75;
+		color: #ffd75f;
 	}
 
 	label {
@@ -49,6 +28,7 @@
 
 .zs-shop-notice {
 	width: 100%;
+	margin-bottom: 8px;
 	padding: 10px 12px;
 	border-radius: 6px;
 	background-color: rgba( 120, 40, 40, 0.55 );
@@ -67,32 +47,40 @@
 	}
 }
 
-.zs-shop-tile-grid {
-	width: 100%;
-	flex-direction: row;
-	flex-wrap: wrap;
-	gap: 5px;
-	overflow-y: scroll;
-}
-
-.zs-shop-tile {
-	width: 86px;
-	height: 86px;
-	border-radius: 6px;
-	background-color: rgba( 255, 255, 255, 0.06 );
-	border: 1px solid transparent;
+.zs-shop-icon {
 	position: relative;
+	width: 100%;
+	height: 100%;
 	cursor: pointer;
-	flex-direction: column;
+	border-radius: 6px;
 	overflow: hidden;
 
-	&:hover {
-		background-color: rgba( 80, 160, 255, 0.16 );
-		border-color: rgba( 80, 170, 255, 0.4 );
+	SpawnMenuIcon {
+		width: 100%;
+		height: 100%;
 	}
 
-	&:active {
-		padding: 2px;
+	/*
+		We use SpawnMenuIcon only for the thumbnail/model preview.
+		It draws its own prop-cost badge and title because we feed it prop:<path>.
+		Hide its built-in labels and draw our own ZS price/name instead.
+	*/
+	SpawnMenuIcon label,
+	SpawnMenuIcon .cost,
+	SpawnMenuIcon .price,
+	SpawnMenuIcon .badge,
+	SpawnMenuIcon .spawn-cost,
+	SpawnMenuIcon .prop-cost,
+	SpawnMenuIcon .budget,
+	SpawnMenuIcon .amount,
+	SpawnMenuIcon .count,
+	SpawnMenuIcon .title,
+	SpawnMenuIcon .name {
+		display: none;
+	}
+
+	&:hover {
+		transform: scale( 1.02 );
 	}
 
 	&.cannot-buy {
@@ -101,66 +89,60 @@
 	}
 
 	&.cannot-buy:hover {
-		background-color: rgba( 255, 255, 255, 0.06 );
-		border-color: transparent;
+		transform: none;
 	}
 
 	&.too-expensive {
-		background-color: rgba( 120, 40, 40, 0.25 );
+		opacity: 0.55;
 	}
 }
 
 .zs-shop-price {
 	position: absolute;
-	top: 5px;
-	left: 5px;
-	z-index: 2;
+	top: 4px;
+	left: 4px;
+	z-index: 999;
 
-	min-width: 20px;
+	min-width: 22px;
 	height: 18px;
 	padding: 0 5px;
 	border-radius: 5px;
 
-	background-color: rgba( 0, 0, 0, 0.78 );
+	background-color: rgba( 0, 0, 0, 0.92 );
 	color: #ffe36a;
 
 	font-size: 11px;
 	font-weight: 900;
 	align-items: center;
 	justify-content: center;
-}
 
-.zs-shop-preview {
-	flex-grow: 1;
-	width: 100%;
-	align-items: center;
-	justify-content: center;
-}
-
-.zs-shop-preview-placeholder {
-	width: 46px;
-	height: 46px;
-	border-radius: 12px;
-	background-color: rgba( 255, 255, 255, 0.08 );
-	color: rgba( 255, 255, 255, 0.78 );
-	font-size: 18px;
-	font-weight: 900;
-	align-items: center;
-	justify-content: center;
+	pointer-events: none;
+	box-shadow: 0 0 0 1px rgba( 255, 227, 106, 0.12 );
 }
 
 .zs-shop-name {
-	height: 22px;
-	width: 100%;
-	padding: 0 4px;
-	background-color: rgba( 10, 14, 20, 0.72 );
+	position: absolute;
+	left: 6px;
+	right: 6px;
+	bottom: 6px;
+	z-index: 999;
+
+	min-height: 20px;
+	padding: 3px 7px;
+	border-radius: 9px;
+
+	background-color: rgba( 10, 14, 20, 0.78 );
 	color: white;
+
 	font-size: 10px;
 	font-weight: 800;
 	text-align: center;
 	align-items: center;
 	justify-content: center;
+
 	text-overflow: ellipsis;
 	white-space: nowrap;
 	overflow: hidden;
+
+	pointer-events: none;
 }

@@ -6,54 +6,64 @@
 @inherits Panel
 @namespace Sandbox
 
-<div class="zs-shop-browser">
-	<div class="zs-shop-toolbar">
-		<TextEntry Value:bind=@Filter placeholder="Search..." />
-		<div class="zs-shop-coins">
-			<span>Coins</span>
-			<label>@Coins</label>
-		</div>
-	</div>
+<SpawnMenuContent>
+	<Header>
+		<SpawnMenuToolbar>
+			<Left>
+				<TextEntry Placeholder="Search..." class="filter menu-input" Value:bind=@Filter />
+			</Left>
 
-	@if ( !CanUseShop )
-	{
-		<div class="zs-shop-notice">
-			<div>@BlockedTitle</div>
-			<label>@BlockedText</label>
-		</div>
-	}
-
-	<div class="zs-shop-tile-grid">
-		@foreach ( var item in FilteredItems )
-		{
-			var canBuy = CanBuy( item );
-
-			<div class="@GetItemClass( item, canBuy )" @onclick="@(() => Buy( item ))">
-				<div class="zs-shop-price">@item.Cost</div>
-
-				<div class="zs-shop-preview">
-					@if ( !string.IsNullOrWhiteSpace( item.PreviewPath ) )
-					{
-						<!-- Placeholder text until we wire the same preview renderer as props. -->
-						<div class="zs-shop-preview-placeholder">@GetShortName( item.DisplayName )</div>
-					}
-					else
-					{
-						<div class="zs-shop-preview-placeholder">?</div>
-					}
+			<Right>
+				<div class="zs-shop-coins">
+					<span>Coins</span>
+					<label>@Coins</label>
 				</div>
+			</Right>
+		</SpawnMenuToolbar>
+	</Header>
 
-				<div class="zs-shop-name">@item.DisplayName</div>
+	<Body>
+		@if ( !CanUseShop )
+		{
+			<div class="zs-shop-notice">
+				<div>@BlockedTitle</div>
+				<label>@BlockedText</label>
 			</div>
 		}
-	</div>
-</div>
+
+		<VirtualGrid Items=@FilteredItems ItemSize=@(120)>
+			<Item Context="item">
+				@if ( item is ZombieSurvivalShopItem shopItem )
+				{
+					var canBuy = CanBuy( shopItem );
+
+					<div class="@GetShopIconClass( shopItem, canBuy )" @onclick="@(() => Buy( shopItem ))">
+						<SpawnMenuIcon Ident=@GetSpawnMenuIdent( shopItem ) Title=@shopItem.DisplayName />
+
+						<div class="zs-shop-price">@shopItem.Cost</div>
+						<div class="zs-shop-name">@shopItem.DisplayName</div>
+					</div>
+				}
+			</Item>
+		</VirtualGrid>
+	</Body>
+</SpawnMenuContent>
 
 @code
 {
 	public string Category { get; set; }
 
-	private string Filter { get; set; } = "";
+	private string _filter = "";
+
+	private string Filter
+	{
+		get => _filter;
+		set
+		{
+			_filter = value ?? "";
+			StateHasChanged();
+		}
+	}
 
 	private Player LocalPlayer => Player.FindLocalPlayer();
 	private PlayerData Data => LocalPlayer?.PlayerData;
@@ -87,6 +97,7 @@
 					|| x.Description.Contains( Filter, StringComparison.OrdinalIgnoreCase )
 					|| x.Category.Contains( Filter, StringComparison.OrdinalIgnoreCase )
 					|| x.Id.Contains( Filter, StringComparison.OrdinalIgnoreCase )
+					|| x.ResourcePath.Contains( Filter, StringComparison.OrdinalIgnoreCase )
 				)
 				.ToArray();
 		}
@@ -171,6 +182,7 @@
 			hash.Add( item.Cost );
 			hash.Add( item.Type );
 			hash.Add( item.Category );
+			hash.Add( item.ResourcePath );
 			hash.Add( item.PreviewPath );
 		}
 
@@ -202,9 +214,9 @@
 		ZombieSurvivalGame.RequestBuyItem( item.Id );
 	}
 
-	private string GetItemClass( ZombieSurvivalShopItem item, bool canBuy )
+	private string GetShopIconClass( ZombieSurvivalShopItem item, bool canBuy )
 	{
-		var classes = "zs-shop-tile";
+		var classes = "zs-shop-icon";
 
 		if ( item is null )
 			return classes;
@@ -220,16 +232,18 @@
 		return classes;
 	}
 
-	private static string GetShortName( string value )
+	private static string GetSpawnMenuIdent( ZombieSurvivalShopItem item )
 	{
-		if ( string.IsNullOrWhiteSpace( value ) )
-			return "?";
+		if ( item is null )
+			return "";
 
-		var parts = value.Split( ' ', StringSplitOptions.RemoveEmptyEntries );
+		var path = item.PreviewPath;
 
-		if ( parts.Length == 1 )
-			return parts[0].Length <= 3 ? parts[0] : parts[0][..Math.Min( 3, parts[0].Length )].ToUpperInvariant();
+		if ( string.IsNullOrWhiteSpace( path ) )
+			path = item.ResourcePath;
 
-		return string.Join( "", parts.Select( x => char.ToUpperInvariant( x[0] ) ) );
+		path = path.Replace( "\\", "/" ).Trim();
+
+		return $"prop:{path}";
 	}
 }
