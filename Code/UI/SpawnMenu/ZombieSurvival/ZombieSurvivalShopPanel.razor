@@ -232,22 +232,22 @@
 		if ( path.EndsWith( ".vmdl", StringComparison.OrdinalIgnoreCase ) || path.EndsWith( ".vmdl_c", StringComparison.OrdinalIgnoreCase ) )
 			return $"prop:{path}";
 
+		// Weapons in this project ship with a sibling .sent (ScriptedEntity) file
+		// next to the .prefab. The engine generates thumbnails from the .sent so
+		// joining clients see the same icons as the host.
+		if ( path.EndsWith( ".prefab", StringComparison.OrdinalIgnoreCase ) )
+		{
+			var sentPath = path[..^".prefab".Length] + ".sent";
+			return $"entity:{sentPath}";
+		}
+
 		return "";
 	}
 
 	private static string GetPreviewIcon( ZombieSurvivalShopItem item )
 	{
-		if ( item is null )
-			return "";
-
-		var path = item.PreviewPath;
-
-		if ( string.IsNullOrWhiteSpace( path ) )
-			path = item.ResourcePath;
-
-		if ( string.IsNullOrWhiteSpace( path ) )
-			return "";
-
-		return $"thumb:{path.Replace( "\\", "/" ).Trim()}";
+		// Leave empty so SpawnMenuIcon falls back to thumb:{Path} parsed from Ident.
+		// The entity: ident above produces a thumb path that resolves on every client.
+		return "";
 	}
 }

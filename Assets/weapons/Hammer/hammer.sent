@@ -1,0 +1,9 @@
+{
+  "Prefab": "weapons/Hammer/hammer.prefab",
+  "Title": "Hammer",
+  "Description": null,
+  "Category": "Weapon",
+  "IncludeCode": false,
+  "__references": [],
+  "__version": 0
+}

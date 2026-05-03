@@ -263,12 +263,9 @@ public sealed class PlayerLoadout : Component, Local.IPlayerEvents, Global.IPlay
 
 	private bool ShouldSkipSpawnRestore()
 	{
-		if ( ZombieSurvivalGame.Current is null || !ZombieSurvivalGame.Enabled )
-			return false;
-
-		return Player.IsValid()
-			&& Player.PlayerData.IsValid()
-			&& Player.PlayerData.ZombieSurvivalRole == ZombieSurvivalRole.Zombie;
+		// In Zombie Survival, no one spawns with a default/saved loadout.
+		// Humans buy from the shop; zombies have inventory stripped by ZombieSurvivalGame.ApplyRoleToPlayer.
+		return ZombieSurvivalGame.Current is not null && ZombieSurvivalGame.Enabled;
 	}
 
 	private void ClearWeaponsWithoutSaving()

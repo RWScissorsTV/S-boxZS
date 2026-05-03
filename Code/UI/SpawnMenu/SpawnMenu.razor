@@ -175,6 +175,25 @@
         }
     }
 
+    public void SwitchTabByTypeName( string typeName )
+    {
+        if ( string.IsNullOrEmpty( typeName ) ) return;
+        var match = tabs.FirstOrDefault( p => p.GetType().Name == typeName );
+        if ( match != null ) SwitchTab( match );
+    }
+
+    /// <summary>
+    /// Set the active spawn-menu tab by class name. Persists via cookie so subsequent
+    /// rebuilds (e.g. after first BuildTabs) still land on the requested tab.
+    /// </summary>
+    public static void GotoTab( string tabTypeName )
+    {
+        Game.Cookies.Set( "spawnmenu.tab", tabTypeName );
+
+        var menu = SpawnMenuHost.FindActiveSpawnMenu();
+        menu?.SwitchTabByTypeName( tabTypeName );
+    }
+
     void SwitchUtilityTab(Panel tab)
     {
         activeUtilityTab = tab;

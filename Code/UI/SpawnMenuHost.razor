@@ -133,6 +133,39 @@
         }
     }
 
+    /// <summary>
+    /// Programmatically pin the spawn menu open (as if the player is holding Q)
+    /// and switch to the main SpawnMenu mode. Used by ZombieSurvival to auto-open
+    /// the human shop on spawn.
+    /// </summary>
+    public static void OpenSticky()
+    {
+        var host = Game.ActiveScene.Get<SpawnMenuHost>();
+        if ( host == null ) return;
+
+        host.stickOpen = true;
+        SwitchMode( "SpawnMenu" );
+    }
+
+    /// <summary>
+    /// Returns the currently-registered SpawnMenu mode panel, or null if not present.
+    /// Exposed so other UI code (e.g. SpawnMenu.GotoTab) can switch tabs without
+    /// poking at PanelSwitcher directly.
+    /// </summary>
+    public static SpawnMenu FindActiveSpawnMenu()
+    {
+        var host = Game.ActiveScene.Get<SpawnMenuHost>();
+        if ( host?.PanelSwitcher == null ) return null;
+
+        foreach ( var child in host.PanelSwitcher.Children )
+        {
+            if ( child is SpawnMenu menu )
+                return menu;
+        }
+
+        return null;
+    }
+
     public static void SwitchMode( string modeName, bool remember = true )
     {
         var host = Game.ActiveScene.Get<SpawnMenuHost>();
