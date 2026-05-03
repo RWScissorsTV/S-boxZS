@@ -1,11 +1,14 @@
+using Sandbox;
+
 public sealed class ZombieSurvivalZombieFormPresenter : Component
 {
 	private const string VisualTag = "zs_form_visual";
 
 	private GameObject _visual;
-	private ZombieSurvivalForm _activeForm;
+	private ZombieSurvivalForm _activeForm = ZombieSurvivalForm.None;
 	private SkinnedModelRenderer _visualRenderer;
 	private ZombieSurvivalFormAnimator _animator;
+
 	private bool _baseRenderersHidden;
 
 	protected override void OnUpdate()
@@ -39,7 +42,15 @@ public sealed class ZombieSurvivalZombieFormPresenter : Component
 	private void UpdateForm()
 	{
 		var player = GetComponent<Player>();
-		if ( !player.IsValid() || !player.PlayerData.IsValid() || player.PlayerData.ZombieSurvivalRole != ZombieSurvivalRole.Zombie )
+
+		if ( !player.IsValid() || !player.PlayerData.IsValid() )
+		{
+			DestroyVisual();
+			SetBaseRenderersVisible( true );
+			return;
+		}
+
+		if ( player.PlayerData.ZombieSurvivalRole != ZombieSurvivalRole.Zombie )
 		{
 			DestroyVisual();
 			SetBaseRenderersVisible( true );
@@ -50,43 +61,72 @@ public sealed class ZombieSurvivalZombieFormPresenter : Component
 			? ZombieSurvivalForm.Walker
 			: player.PlayerData.ZombieSurvivalForm;
 
-		SetBaseRenderersVisible( false );
-
-		if ( _visual.IsValid() && _activeForm == form )
+		// If the visual already exists and is valid, make sure the base body is hidden.
+		if ( _visual.IsValid() && _visualRenderer.IsValid() && _activeForm == form )
+		{
+			SetBaseRenderersVisible( false );
 			return;
+		}
 
+		// If the form changed or the old visual is invalid, rebuild it.
 		DestroyVisual();
-		CreateVisual( player, form );
+
+		if ( CreateVisual( player, form ) )
+		{
+			// Only hide the base Citizen body after the replacement visual is actually valid.
+			SetBaseRenderersVisible( false );
+			return;
+		}
+
+		// If anything failed, keep the normal player body visible.
+		SetBaseRenderersVisible( true );
 	}
 
-	private void CreateVisual( Player player, ZombieSurvivalForm form )
+	private bool CreateVisual( Player player, ZombieSurvivalForm form )
 	{
 		var definition = ZombieSurvivalFormCatalog.Get( form );
+
+		if ( string.IsNullOrWhiteSpace( definition.ModelPath ) )
+		{
+			Log.Warning( $"Zombie Survival: zombie form '{definition.DisplayName}' has no model path." );
+			return false;
+		}
+
 		var model = Model.Load( definition.ModelPath );
+
 		if ( model is null || model.IsError )
 		{
-			Log.Warning( $"Zombie Survival: failed to load zombie form model '{definition.ModelPath}'." );
-			SetBaseRenderersVisible( true );
-			return;
+			Log.Warning( $"Zombie Survival: failed to load zombie form model '{definition.ModelPath}' for '{definition.DisplayName}'." );
+			return false;
 		}
 
 		_visual = new GameObject( false, $"ZS {definition.DisplayName} Visual" );
 		_visual.Tags.Add( VisualTag );
 		_visual.SetParent( GameObject, false );
-		_visual.LocalTransform = new Transform( Vector3.Zero, Rotation.Identity, definition.ModelScale );
+
+		_visual.LocalTransform = new Transform(
+			definition.LocalPosition,
+			definition.LocalAngles.ToRotation(),
+			definition.ModelScale
+		);
 
 		_visualRenderer = _visual.AddComponent<SkinnedModelRenderer>();
 		_visualRenderer.Model = model;
+		_visualRenderer.Enabled = true;
 		_visualRenderer.UseAnimGraph = true;
 		_visualRenderer.CreateBoneObjects = false;
 
 		_animator = _visual.AddComponent<ZombieSurvivalFormAnimator>();
 		_animator.Renderer = _visualRenderer;
 		_animator.PlayerController = player.Controller;
-		_animator.WalkSpeedForFullBlend = form == ZombieSurvivalForm.Headcrab ? 120f : 180f;
-		_animator.WalkSpeedForNormalPlayback = form == ZombieSurvivalForm.Headcrab ? 120f : 180f;
+		_animator.WalkSpeedForFullBlend = definition.MoveSpeedForFullBlend;
+		_animator.WalkSpeedForNormalPlayback = definition.MoveSpeedForFullBlend;
 
 		_activeForm = form;
+
+		Log.Info( $"Zombie Survival: applied zombie form '{definition.DisplayName}' using model '{definition.ModelPath}' at scale {definition.ModelScale}." );
+
+		return true;
 	}
 
 	private void DestroyVisual()
@@ -107,6 +147,9 @@ public sealed class ZombieSurvivalZombieFormPresenter : Component
 
 		foreach ( var renderer in GameObject.GetComponentsInChildren<SkinnedModelRenderer>( true ) )
 		{
+			if ( !renderer.IsValid() )
+				continue;
+
 			if ( renderer.GameObject.Tags.Has( VisualTag ) )
 				continue;
 
