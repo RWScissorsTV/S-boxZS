@@ -1,0 +1,123 @@
+@using Sandbox;
+@using Sandbox.UI;
+@inherits PanelComponent
+@namespace Sandbox
+
+@{
+	var player = Player.FindLocalPlayer();
+	var data = player?.PlayerData;
+	var game = ZombieSurvivalGame.Current;
+
+	if ( !ZombieSurvivalGame.Enabled || game is null || !player.IsValid() || player.WantsHideHud || !data.IsValid() )
+		return;
+}
+
+<root>
+	<div class="zs-hud hud-panel">
+		<div class="primary">
+			<label class="phase">@PhaseText</label>
+			<label class="timer">@TimerText</label>
+		</div>
+		<div class="secondary">
+			<label class="role @RoleClass">@RoleText</label>
+			<label class="objective">@ObjectiveText</label>
+		</div>
+		<div class="counts">
+			<label>@game.HumanCount humans</label>
+			<label>@game.ZombieCount zombies</label>
+		</div>
+		@if ( game.Phase == ZombieSurvivalPhase.Build )
+		{
+			<div class="budget">
+				<label>@data.ZombieSurvivalBuildPoints build points</label>
+				<label>@ZombieSurvivalGame.GetPropSpawnCost() per prop</label>
+			</div>
+		}
+	</div>
+</root>
+
+@code
+{
+	Player Player => Player.FindLocalPlayer();
+	PlayerData Data => Player?.PlayerData;
+	ZombieSurvivalGame ZS => ZombieSurvivalGame.Current;
+
+	string PhaseText => ZS?.Phase switch
+	{
+		ZombieSurvivalPhase.WaitingForPlayers => "Waiting",
+		ZombieSurvivalPhase.Build => "Build",
+		ZombieSurvivalPhase.Survival => "Survival",
+		ZombieSurvivalPhase.RoundEnd => "Round End",
+		_ => "Zombie Survival"
+	};
+
+	string TimerText
+	{
+		get
+		{
+			if ( ZS is null )
+				return "--:--";
+
+			if ( ZS.Phase == ZombieSurvivalPhase.WaitingForPlayers )
+				return $"{ZS.HumanCount + ZS.ZombieCount}/{ZombieSurvivalGame.MinimumPlayersToStart}";
+
+			return FormatTime( ZS.RemainingTime );
+		}
+	}
+
+	string RoleText => Data?.ZombieSurvivalRole switch
+	{
+		ZombieSurvivalRole.Human => "Human",
+		ZombieSurvivalRole.Zombie => ZombieSurvivalFormCatalog.Get( Data.ZombieSurvivalForm ).DisplayName,
+		_ => "Joining"
+	};
+
+	string RoleClass => Data?.ZombieSurvivalRole switch
+	{
+		ZombieSurvivalRole.Human => "human",
+		ZombieSurvivalRole.Zombie => "zombie",
+		_ => "unassigned"
+	};
+
+	string ObjectiveText => ZS?.Phase switch
+	{
+		ZombieSurvivalPhase.WaitingForPlayers => "Waiting for enough players",
+		ZombieSurvivalPhase.Build => "Place and fortify barricades",
+		ZombieSurvivalPhase.Survival when Data?.ZombieSurvivalRole == ZombieSurvivalRole.Zombie => "Break barricades and infect humans",
+		ZombieSurvivalPhase.Survival => "Hold out until time expires",
+		ZombieSurvivalPhase.RoundEnd when ZS.HumansWonLastRound => "Humans survived",
+		ZombieSurvivalPhase.RoundEnd => "Zombies overran the humans",
+		_ => ""
+	};
+
+	protected override void OnUpdate()
+	{
+		SetClass( "build", ZS?.Phase == ZombieSurvivalPhase.Build );
+		SetClass( "survival", ZS?.Phase == ZombieSurvivalPhase.Survival );
+		SetClass( "round-end", ZS?.Phase == ZombieSurvivalPhase.RoundEnd );
+		SetClass( "waiting", ZS?.Phase == ZombieSurvivalPhase.WaitingForPlayers );
+	}
+
+	protected override int BuildHash()
+	{
+		var hash = new HashCode();
+		hash.Add( ZombieSurvivalGame.Enabled );
+		hash.Add( ZS?.Phase );
+		hash.Add( (int)MathF.Ceiling( ZS?.RemainingTime ?? 0f ) );
+		hash.Add( ZS?.HumansWonLastRound );
+		hash.Add( ZS?.HumanCount );
+		hash.Add( ZS?.ZombieCount );
+		hash.Add( Data?.ZombieSurvivalRole );
+		hash.Add( Data?.ZombieSurvivalBuildPoints );
+		hash.Add( ZombieSurvivalGame.GetPropSpawnCost() );
+		hash.Add( Player?.WantsHideHud );
+		return hash.ToHashCode();
+	}
+
+	private static string FormatTime( float seconds )
+	{
+		seconds = MathF.Max( seconds, 0f );
+		var totalSeconds = (int)MathF.Ceiling( seconds );
+		return $"{totalSeconds / 60:00}:{totalSeconds % 60:00}";
+	}
+}

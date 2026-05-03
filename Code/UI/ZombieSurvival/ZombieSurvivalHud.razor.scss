@@ -1,0 +1,114 @@
+@import "/UI/Theme.scss";
+
+ZombieSurvivalHud
+{
+	position: absolute;
+	top: $deadzone-y;
+	left: 0;
+	right: 0;
+	justify-content: center;
+	align-items: flex-start;
+	pointer-events: none;
+
+	.zs-hud
+	{
+		flex-direction: column;
+		align-items: stretch;
+		gap: 8px;
+		min-width: 320px;
+		max-width: 440px;
+		padding: 14px 18px;
+		border-left: 4px solid #e0e5ee;
+		background-color: #090b0dcc;
+	}
+
+	.primary,
+	.secondary,
+	.counts,
+	.budget
+	{
+		flex-direction: row;
+		align-items: center;
+		justify-content: space-between;
+		gap: 18px;
+	}
+
+	.phase
+	{
+		font-size: 18px;
+		font-weight: 800;
+		color: #f4f6f8;
+		text-transform: uppercase;
+	}
+
+	.timer
+	{
+		font-size: 28px;
+		font-weight: 800;
+		color: #ffffff;
+	}
+
+	.role
+	{
+		font-size: 14px;
+		font-weight: 800;
+		text-transform: uppercase;
+
+		&.human
+		{
+			color: #80d8ff;
+		}
+
+		&.zombie
+		{
+			color: #ff8a80;
+		}
+	}
+
+	.objective,
+	.counts label,
+	.budget label
+	{
+		font-size: 14px;
+		font-weight: 600;
+		color: #d9dee6;
+	}
+
+	.objective
+	{
+		text-align: right;
+	}
+
+	.counts
+	{
+		padding-top: 7px;
+		border-top: 1px solid #ffffff1c;
+	}
+
+	.budget
+	{
+		padding: 7px 10px;
+		border-radius: 4px;
+		background-color: #ffffff12;
+	}
+
+	&.waiting .zs-hud
+	{
+		border-left-color: #b8c0cc;
+	}
+
+	&.build .zs-hud
+	{
+		border-left-color: #ffd166;
+	}
+
+	&.survival .zs-hud
+	{
+		border-left-color: #ef476f;
+	}
+
+	&.round-end .zs-hud
+	{
+		border-left-color: #06d6a0;
+	}
+}
