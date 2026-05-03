@@ -14,7 +14,7 @@ public sealed class ZombieSurvivalZombieAttack : Component
 	[Property] public float Range { get; set; } = 90f;
 	[Property] public float Radius { get; set; } = 14f;
 	[Property] public float Cooldown { get; set; } = 1f;
-	[Property] public float Force { get; set; } = 450f;
+	[Property] public float Force { get; set; } = 200f;
 	[Property] public SoundEvent[] AttackSounds { get; set; } = Array.Empty<SoundEvent>();
 	[Property] public SoundEvent[] HitSounds { get; set; } = Array.Empty<SoundEvent>();
 	[Property] public SoundEvent[] AmbientSounds { get; set; } = Array.Empty<SoundEvent>();
@@ -147,10 +147,7 @@ public sealed class ZombieSurvivalZombieAttack : Component
 			damageable.OnDamage( damageInfo );
 		}
 
-		if ( trace.GameObject.GetComponentInChildren<Rigidbody>() is { } rb && rb.IsValid() )
-		{
-			rb.ApplyImpulse( ray.Forward * Force * rb.Mass );
-		}
+		ApplyKnockback( trace.GameObject, player, ray );
 	}
 
 	private SceneTraceResult TraceAttackTarget( Ray ray, bool useHitboxes )
@@ -176,6 +173,61 @@ public sealed class ZombieSurvivalZombieAttack : Component
 			return barricade;
 
 		return target.GetComponentInParent<Component.IDamageable>( true );
+	}
+
+	private void ApplyKnockback( GameObject target, Player attacker, Ray ray )
+	{
+		var rb = ResolveKnockbackBody( target, out var targetPlayer );
+		if ( !rb.IsValid() )
+			return;
+
+		var direction = GetKnockbackDirection( target, attacker, targetPlayer, ray );
+		var velocityDelta = direction * Force;
+
+		if ( targetPlayer.IsValid() )
+		{
+			targetPlayer.ApplyZombieSurvivalKnockbackHost( velocityDelta, 0.15f );
+			return;
+		}
+
+		rb.ApplyImpulse( velocityDelta * rb.Mass );
+	}
+
+	private static Rigidbody ResolveKnockbackBody( GameObject target, out Player targetPlayer )
+	{
+		targetPlayer = null;
+
+		if ( !target.IsValid() )
+			return null;
+
+		targetPlayer = target.GetComponentInParent<Player>( true );
+		if ( targetPlayer.IsValid() && targetPlayer.Controller.IsValid() && targetPlayer.Controller.Body.IsValid() )
+			return targetPlayer.Controller.Body;
+
+		var rb = target.Components.Get<Rigidbody>( FindMode.EverythingInSelfAndParent );
+		if ( rb.IsValid() )
+			return rb;
+
+		return target.GetComponentInChildren<Rigidbody>( true );
+	}
+
+	private static Vector3 GetKnockbackDirection( GameObject target, Player attacker, Player targetPlayer, Ray ray )
+	{
+		var direction = Vector3.Zero;
+
+		if ( attacker.IsValid() && targetPlayer.IsValid() && targetPlayer != attacker )
+			direction = (targetPlayer.WorldPosition - attacker.WorldPosition).WithZ( 0f );
+
+		if ( direction.Length < 0.001f && attacker.IsValid() && target.IsValid() )
+			direction = (target.WorldPosition - attacker.WorldPosition).WithZ( 0f );
+
+		if ( direction.Length < 0.001f )
+			direction = ray.Forward.WithZ( 0f );
+
+		if ( direction.Length < 0.001f )
+			direction = ray.Forward;
+
+		return (direction.Normal + Vector3.Up * 0.15f).Normal;
 	}
 
 	[Rpc.Broadcast]
