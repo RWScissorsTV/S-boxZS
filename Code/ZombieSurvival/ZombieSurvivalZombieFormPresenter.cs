@@ -10,6 +10,8 @@ public sealed class ZombieSurvivalZombieFormPresenter : Component
 	private ZombieSurvivalForm _activeForm = ZombieSurvivalForm.None;
 	private SkinnedModelRenderer _visualRenderer;
 	private ZombieSurvivalFormAnimator _animator;
+	private ModelHitboxes _modelHitboxes;
+	private SkinnedModelRenderer _originalHitboxRenderer;
 	private readonly Dictionary<SkinnedModelRenderer, Color> _baseRendererTints = new();
 
 	private bool _baseRenderersHidden;
@@ -22,12 +24,14 @@ public sealed class ZombieSurvivalZombieFormPresenter : Component
 	protected override void OnDisabled()
 	{
 		DestroyVisual();
+		RestoreHitboxRenderer();
 		SetBaseRenderersVisible( true );
 	}
 
 	protected override void OnDestroy()
 	{
 		DestroyVisual();
+		RestoreHitboxRenderer();
 		SetBaseRenderersVisible( true );
 	}
 
@@ -49,6 +53,7 @@ public sealed class ZombieSurvivalZombieFormPresenter : Component
 		if ( !player.IsValid() || !player.PlayerData.IsValid() )
 		{
 			DestroyVisual();
+			RestoreHitboxRenderer();
 			SetBaseRenderersVisible( true );
 			return;
 		}
@@ -56,6 +61,7 @@ public sealed class ZombieSurvivalZombieFormPresenter : Component
 		if ( player.PlayerData.ZombieSurvivalRole != ZombieSurvivalRole.Zombie )
 		{
 			DestroyVisual();
+			RestoreHitboxRenderer();
 			SetBaseRenderersVisible( true );
 			return;
 		}
@@ -69,6 +75,7 @@ public sealed class ZombieSurvivalZombieFormPresenter : Component
 		{
 			SyncVisualTransform( player, form );
 			UpdateViewVisibility( player );
+			RetargetHitboxRenderer( player );
 			SetBaseRenderersVisible( false );
 			return;
 		}
@@ -80,6 +87,7 @@ public sealed class ZombieSurvivalZombieFormPresenter : Component
 		{
 			SyncVisualTransform( player, form );
 			UpdateViewVisibility( player );
+			RetargetHitboxRenderer( player );
 
 			// Only hide the base Citizen body after the replacement visual is actually valid.
 			SetBaseRenderersVisible( false );
@@ -87,6 +95,7 @@ public sealed class ZombieSurvivalZombieFormPresenter : Component
 		}
 
 		// If anything failed, keep the normal player body visible.
+		RestoreHitboxRenderer();
 		SetBaseRenderersVisible( true );
 	}
 
@@ -109,6 +118,9 @@ public sealed class ZombieSurvivalZombieFormPresenter : Component
 		}
 
 		var parentObject = GetVisualParent( player );
+
+		if ( !parentObject.IsValid() )
+			return false;
 
 		_visual = new GameObject( true, $"ZS {definition.DisplayName} Visual" );
 		_visual.Tags.Add( VisualTag );
@@ -149,7 +161,7 @@ public sealed class ZombieSurvivalZombieFormPresenter : Component
 		_visual.LocalTransform = new Transform(
 			definition.LocalPosition,
 			definition.LocalAngles.ToRotation(),
-			GetCompensatedScale( parentObject, definition.ModelScale )
+			definition.ModelScale
 		);
 	}
 
@@ -176,23 +188,30 @@ public sealed class ZombieSurvivalZombieFormPresenter : Component
 		return player?.GameObject;
 	}
 
-	private static Vector3 GetCompensatedScale( GameObject parentObject, float desiredWorldScale )
+	private void RetargetHitboxRenderer( Player player )
 	{
-		var parentScale = parentObject.IsValid() ? parentObject.WorldScale : Vector3.One;
+		if ( !_visualRenderer.IsValid() || !player.IsValid() )
+			return;
 
-		return new Vector3(
-			desiredWorldScale / SafeScaleAxis( parentScale.x ),
-			desiredWorldScale / SafeScaleAxis( parentScale.y ),
-			desiredWorldScale / SafeScaleAxis( parentScale.z )
-		);
+		var parentObject = GetVisualParent( player );
+		if ( !parentObject.IsValid() )
+			return;
+
+		_modelHitboxes ??= parentObject.GetComponent<ModelHitboxes>();
+		if ( !_modelHitboxes.IsValid() )
+			return;
+
+		if ( !_originalHitboxRenderer.IsValid() )
+			_originalHitboxRenderer = _modelHitboxes.Renderer;
+
+		if ( _modelHitboxes.Renderer != _visualRenderer )
+			_modelHitboxes.Renderer = _visualRenderer;
 	}
 
-	private static float SafeScaleAxis( float value )
+	private void RestoreHitboxRenderer()
 	{
-		if ( MathF.Abs( value ) < 0.0001f )
-			return 1f;
-
-		return value;
+		if ( _modelHitboxes.IsValid() && _originalHitboxRenderer.IsValid() )
+			_modelHitboxes.Renderer = _originalHitboxRenderer;
 	}
 
 	private void DestroyVisual()

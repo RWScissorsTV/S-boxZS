@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using Sandbox;
 using Sandbox.CameraNoise;
 
 public sealed class ZombieSurvivalZombieAttack : Component
@@ -16,29 +15,24 @@ public sealed class ZombieSurvivalZombieAttack : Component
 	[Property] public float Radius { get; set; } = 14f;
 	[Property] public float Cooldown { get; set; } = 1f;
 	[Property] public float Force { get; set; } = 450f;
-
 	[Property] public SoundEvent[] AttackSounds { get; set; } = Array.Empty<SoundEvent>();
 	[Property] public SoundEvent[] HitSounds { get; set; } = Array.Empty<SoundEvent>();
 	[Property] public SoundEvent[] AmbientSounds { get; set; } = Array.Empty<SoundEvent>();
-
 	[Property] public float AmbientMinDelay { get; set; } = 8f;
 	[Property] public float AmbientMaxDelay { get; set; } = 18f;
 
 	private TimeUntil _timeUntilNextAttack;
 	private TimeUntil _timeUntilAmbientSound;
-
 	private GameObject _firstPersonViewModel;
 	private ViewModel _firstPersonViewModelController;
 	private ZombieSurvivalFirstPersonPunchViewModel _firstPersonPunchViewModel;
-
 	private bool _hasLocalDefaultControllerShape;
-
 	private float _localDefaultBodyHeight = 72f;
 	private float _localDefaultBodyRadius = 16f;
 	private float _localDefaultDuckedHeight = 36f;
 	private float _localDefaultEyeDistanceFromTop = 8f;
-	private Vector3 _localDefaultCameraOffset = Vector3.Zero;
-	private float _localDefaultReachLength = 85f;
+	private Vector3 _localDefaultCameraOffset = new( 96f, 0f, -4f );
+	private float _localDefaultReachLength = 130f;
 
 	protected override void OnStart()
 	{
@@ -48,7 +42,6 @@ public sealed class ZombieSurvivalZombieAttack : Component
 	protected override void OnUpdate()
 	{
 		ApplyLocalHeadcrabControllerShape();
-
 		UpdateFirstPersonViewModel();
 
 		if ( IsProxy )
@@ -82,12 +75,10 @@ public sealed class ZombieSurvivalZombieAttack : Component
 	public void ConfigureForForm( ZombieSurvivalForm form )
 	{
 		var definition = ZombieSurvivalFormCatalog.Get( form );
-
 		Damage = definition.MeleeDamage;
 		Range = definition.MeleeRange;
 		Radius = definition.MeleeRadius;
 		Cooldown = definition.MeleeCooldown;
-
 		AttackSounds = LoadSounds( definition.AttackSoundPaths );
 		AmbientSounds = LoadSounds( definition.AmbientSoundPaths );
 	}
@@ -95,7 +86,6 @@ public sealed class ZombieSurvivalZombieAttack : Component
 	private bool IsControlledZombie()
 	{
 		var player = GetComponent<Player>();
-
 		if ( !player.IsValid() || !player.PlayerData.IsValid() )
 			return false;
 
@@ -111,12 +101,10 @@ public sealed class ZombieSurvivalZombieAttack : Component
 	private void ApplyLocalHeadcrabControllerShape()
 	{
 		var player = GetComponent<Player>();
-
 		if ( !player.IsValid() || !player.IsLocalPlayer || !player.PlayerData.IsValid() || !player.Controller.IsValid() )
 			return;
 
 		var controller = player.Controller;
-
 		if ( !_hasLocalDefaultControllerShape )
 		{
 			_localDefaultBodyHeight = controller.BodyHeight;
@@ -125,7 +113,6 @@ public sealed class ZombieSurvivalZombieAttack : Component
 			_localDefaultEyeDistanceFromTop = controller.EyeDistanceFromTop;
 			_localDefaultCameraOffset = controller.CameraOffset;
 			_localDefaultReachLength = controller.ReachLength;
-
 			_hasLocalDefaultControllerShape = true;
 		}
 
@@ -136,14 +123,12 @@ public sealed class ZombieSurvivalZombieAttack : Component
 		if ( isHeadcrab )
 		{
 			var definition = ZombieSurvivalFormCatalog.Get( ZombieSurvivalForm.Headcrab );
-
 			controller.BodyHeight = definition.BodyHeight;
 			controller.BodyRadius = definition.BodyRadius;
 			controller.DuckedHeight = definition.DuckedHeight;
 			controller.EyeDistanceFromTop = definition.EyeDistanceFromTop;
 			controller.CameraOffset = definition.CameraOffset;
 			controller.ReachLength = definition.ReachLength;
-
 			return;
 		}
 
@@ -153,12 +138,10 @@ public sealed class ZombieSurvivalZombieAttack : Component
 	private void RestoreLocalControllerShape()
 	{
 		var player = GetComponent<Player>();
-
 		if ( !player.IsValid() || !player.IsLocalPlayer || !player.Controller.IsValid() || !_hasLocalDefaultControllerShape )
 			return;
 
 		var controller = player.Controller;
-
 		controller.BodyHeight = _localDefaultBodyHeight;
 		controller.BodyRadius = _localDefaultBodyRadius;
 		controller.DuckedHeight = _localDefaultDuckedHeight;
@@ -193,7 +176,6 @@ public sealed class ZombieSurvivalZombieAttack : Component
 			return;
 
 		var player = GetComponent<Player>();
-
 		if ( !player.IsValid() || !player.PlayerData.IsValid() )
 			return;
 
@@ -205,18 +187,8 @@ public sealed class ZombieSurvivalZombieAttack : Component
 
 		_timeUntilNextAttack = MathF.Max( Cooldown, 0.05f );
 
-		var definition = ZombieSurvivalFormCatalog.Get( player.PlayerData.ZombieSurvivalForm );
-
-		var attackOrigin = player.WorldPosition + Vector3.Up * definition.MeleeOriginHeight;
-
-		var attackDirection = player.Controller.IsValid()
-			? player.Controller.EyeAngles.ToRotation().Forward
-			: player.WorldRotation.Forward;
-
-		var ray = new Ray( attackOrigin, attackDirection );
-
+		var ray = player.EyeTransform.ForwardRay;
 		var trace = TraceAttackTarget( ray, useHitboxes: true );
-
 		if ( !trace.Hit )
 			trace = TraceAttackTarget( ray, useHitboxes: false );
 
@@ -226,7 +198,6 @@ public sealed class ZombieSurvivalZombieAttack : Component
 			return;
 
 		var damageable = ResolveDamageable( trace.GameObject );
-
 		if ( damageable is not null )
 		{
 			var damageInfo = new DamageInfo( Damage, GameObject, GameObject )
@@ -234,7 +205,6 @@ public sealed class ZombieSurvivalZombieAttack : Component
 				Position = trace.HitPosition,
 				Origin = ray.Position
 			};
-
 			damageInfo.Tags.Add( "zombie" );
 			damageable.OnDamage( damageInfo );
 		}
@@ -264,7 +234,6 @@ public sealed class ZombieSurvivalZombieAttack : Component
 			return null;
 
 		var barricade = target.GetComponentInParent<ZombieSurvivalBarricade>( true );
-
 		if ( barricade.IsValid() )
 			return barricade;
 
@@ -275,7 +244,6 @@ public sealed class ZombieSurvivalZombieAttack : Component
 	private void RpcAttackEffects( bool hit, Vector3 hitPosition )
 	{
 		var player = GetComponent<Player>();
-
 		if ( player.IsValid() )
 		{
 			player.Controller?.Renderer?.Set( "b_attack", true );
@@ -285,22 +253,8 @@ public sealed class ZombieSurvivalZombieAttack : Component
 		if ( player.IsValid() && player.IsLocalPlayer )
 		{
 			TriggerFirstPersonAttackViewModel();
-
-			_ = new Punch(
-				new Vector3(
-					Random.Shared.Float( -8f, -12f ),
-					Random.Shared.Float( -6f, 6f ),
-					0f
-				),
-				0.9f,
-				2.2f,
-				0.35f
-			);
-
-			_ = new Shake(
-				hit ? 0.22f : 0.12f,
-				hit ? 1.0f : 0.55f
-			);
+			_ = new Punch( new Vector3( Random.Shared.Float( -8f, -12f ), Random.Shared.Float( -6f, 6f ), 0f ), 0.9f, 2.2f, 0.35f );
+			_ = new Shake( hit ? 0.22f : 0.12f, hit ? 1.0f : 0.55f );
 		}
 
 		PlayRandomSound( AttackSounds, WorldPosition );
@@ -321,17 +275,13 @@ public sealed class ZombieSurvivalZombieAttack : Component
 			return;
 
 		var sound = Game.Random.FromArray( sounds );
-
 		if ( sound.IsValid() )
 			Sound.Play( sound, position );
 	}
 
 	private void ResetAmbientDelay()
 	{
-		_timeUntilAmbientSound = Game.Random.Float(
-			AmbientMinDelay,
-			MathF.Max( AmbientMaxDelay, AmbientMinDelay )
-		);
+		_timeUntilAmbientSound = Game.Random.Float( AmbientMinDelay, MathF.Max( AmbientMaxDelay, AmbientMinDelay ) );
 	}
 
 	private static SoundEvent[] LoadSounds( string[] paths )
@@ -340,11 +290,9 @@ public sealed class ZombieSurvivalZombieAttack : Component
 			return Array.Empty<SoundEvent>();
 
 		var sounds = new List<SoundEvent>();
-
 		foreach ( var path in paths )
 		{
 			var sound = ResourceLibrary.Get<SoundEvent>( path );
-
 			if ( sound.IsValid() )
 				sounds.Add( sound );
 		}
@@ -381,7 +329,6 @@ public sealed class ZombieSurvivalZombieAttack : Component
 			return;
 
 		var model = LoadFirstPersonPunchModel();
-
 		if ( model is null || model.IsError )
 			return;
 
@@ -404,7 +351,6 @@ public sealed class ZombieSurvivalZombieAttack : Component
 		renderer.CreateBoneObjects = true;
 
 		_firstPersonViewModelController.Renderer = renderer;
-
 		_firstPersonPunchViewModel = _firstPersonViewModel.AddComponent<ZombieSurvivalFirstPersonPunchViewModel>();
 		_firstPersonPunchViewModel.VisualRoot = visualRoot;
 		_firstPersonPunchViewModel.Renderer = renderer;
@@ -434,12 +380,10 @@ public sealed class ZombieSurvivalZombieAttack : Component
 	private static Model LoadFirstPersonPunchModel()
 	{
 		var model = Model.Load( HumanFirstPersonArmsModelPath );
-
 		if ( model is not null && !model.IsError )
 			return model;
 
 		model = Model.Load( FallbackFirstPersonArmsModelPath );
-
 		if ( model is not null && !model.IsError )
 			return model;
 

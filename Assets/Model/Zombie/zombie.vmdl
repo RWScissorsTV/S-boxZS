@@ -553,6 +553,129 @@
 					},
 				]
 			},
+			{
+				_class = "HitboxSetList"
+				children = 
+				[
+					{
+						_class = "HitboxSet"
+						name = "default"
+						children = 
+						[
+							{
+								_class = "HitboxCapsule"
+								parent_bone = "Torso"
+								surface_property = "flesh"
+								translation_only = false
+								tags = ""
+								radius = 22.007633
+								point0 = [ -0.618702, 32.629932, -0.285416 ]
+								point1 = [ 0.005083, -4.096199, -0.119865 ]
+							},
+							{
+								_class = "HitboxCapsule"
+								parent_bone = "Chest"
+								surface_property = "flesh"
+								translation_only = false
+								tags = ""
+								radius = 22.096155
+								point0 = [ -0.206682, 32.499413, -0.462502 ]
+								point1 = [ -0.14687, -0.838724, 0.125084 ]
+							},
+							{
+								_class = "HitboxCapsule"
+								parent_bone = "Head"
+								surface_property = "flesh"
+								translation_only = false
+								tags = ""
+								radius = 26.171976
+								point0 = [ 0.0, 0.0, 0.0 ]
+								point1 = [ 0.0, 0.0, 0.0 ]
+							},
+							{
+								_class = "HitboxCapsule"
+								parent_bone = "Left_Shoulder"
+								surface_property = "flesh"
+								translation_only = false
+								tags = ""
+								radius = 5.995346
+								point0 = [ 0.0, 0.0, 0.0 ]
+								point1 = [ 0.067564, 49.470982, 0.478905 ]
+							},
+							{
+								_class = "HitboxCapsule"
+								parent_bone = "Left_Arm"
+								surface_property = "flesh"
+								translation_only = false
+								tags = ""
+								radius = 6.610499
+								point0 = [ -0.61895, 34.473358, -0.946083 ]
+								point1 = [ 0.314984, -0.020336, -0.518538 ]
+							},
+							{
+								_class = "HitboxCapsule"
+								parent_bone = "Right_Shoulder"
+								surface_property = "flesh"
+								translation_only = false
+								tags = ""
+								radius = 5.324237
+								point0 = [ 0.010113, 0.220634, -0.280624 ]
+								point1 = [ -2.343475, 47.55579, 0.9039 ]
+							},
+							{
+								_class = "HitboxCapsule"
+								parent_bone = "Right_Arm"
+								surface_property = "flesh"
+								translation_only = false
+								tags = ""
+								radius = 5.179219
+								point0 = [ 1.17733, 37.341999, -0.371339 ]
+								point1 = [ 0.186086, 0.056911, 0.060348 ]
+							},
+							{
+								_class = "HitboxCapsule"
+								parent_bone = "Left_Thigh"
+								surface_property = "flesh"
+								translation_only = false
+								tags = ""
+								radius = 7.189597
+								point0 = [ -0.154343, 0.391521, -3.565376 ]
+								point1 = [ 1.96337, 41.891502, -4.377739 ]
+							},
+							{
+								_class = "HitboxCapsule"
+								parent_bone = "Left_Calf"
+								surface_property = "flesh"
+								translation_only = false
+								tags = ""
+								radius = 8.411446
+								point0 = [ 0.890015, -0.961642, -4.073608 ]
+								point1 = [ 3.065174, 40.021088, -4.238266 ]
+							},
+							{
+								_class = "HitboxCapsule"
+								parent_bone = "Right_Thigh"
+								surface_property = "flesh"
+								translation_only = false
+								tags = ""
+								radius = 6.227062
+								point0 = [ 0.295509, 1.213844, -1.93103 ]
+								point1 = [ -0.236366, 42.355293, -1.788931 ]
+							},
+							{
+								_class = "HitboxCapsule"
+								parent_bone = "Right_Calf"
+								surface_property = "flesh"
+								translation_only = false
+								tags = ""
+								radius = 6.975324
+								point0 = [ 0.702145, 42.451988, -4.974623 ]
+								point1 = [ 2.481773, 4.192978, -3.71785 ]
+							},
+						]
+					},
+				]
+			},
 		]
 		model_archetype = ""
 		primary_associated_entity = ""

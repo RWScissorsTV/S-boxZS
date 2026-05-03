@@ -89,15 +89,13 @@ public sealed class ZombieSurvivalGame : GameObjectSystem, Global.IPlayerEvents,
 
 	private TimeUntil _phaseTimer;
 	private TimeUntil _stateBroadcastCooldown;
-
 	private bool _hasDefaultControllerShape;
-
 	private float _defaultBodyHeight = 72f;
 	private float _defaultBodyRadius = 16f;
 	private float _defaultDuckedHeight = 36f;
 	private float _defaultEyeDistanceFromTop = 8f;
-	private Vector3 _defaultCameraOffset = Vector3.Zero;
-	private float _defaultReachLength = 85f;
+	private Vector3 _defaultCameraOffset = new( 96f, 0f, -4f );
+	private float _defaultReachLength = 130f;
 
 	/// <summary>
 	/// Prevents coins from being reset every tick while waiting.
@@ -458,8 +456,8 @@ public sealed class ZombieSurvivalGame : GameObjectSystem, Global.IPlayerEvents,
 		player.Health = preserveHealthFraction
 			? Math.Clamp( player.MaxHealth * previousHealthFraction, 1f, player.MaxHealth )
 			: player.MaxHealth;
-
 		player.Armour = 0f;
+
 		data.ZombieSurvivalAlive = true;
 
 		if ( player.Controller.IsValid() )
@@ -497,20 +495,16 @@ public sealed class ZombieSurvivalGame : GameObjectSystem, Global.IPlayerEvents,
 		if ( isZombie )
 		{
 			StripZombieInventory( player );
-
 			if ( inventory.IsValid() )
 				inventory.Enabled = false;
-
 			if ( loadout.IsValid() )
 				loadout.Enabled = false;
-
 			_ = StripZombieInventoryNextFrame( player );
 		}
 		else
 		{
 			if ( inventory.IsValid() )
 				inventory.Enabled = true;
-
 			if ( loadout.IsValid() )
 				loadout.Enabled = true;
 		}
@@ -529,7 +523,6 @@ public sealed class ZombieSurvivalGame : GameObjectSystem, Global.IPlayerEvents,
 		_defaultEyeDistanceFromTop = controller.EyeDistanceFromTop;
 		_defaultCameraOffset = controller.CameraOffset;
 		_defaultReachLength = controller.ReachLength;
-
 		_hasDefaultControllerShape = true;
 	}
 
@@ -583,7 +576,6 @@ public sealed class ZombieSurvivalGame : GameObjectSystem, Global.IPlayerEvents,
 			return;
 
 		var inventory = player.GetComponent<PlayerInventory>();
-
 		if ( !inventory.IsValid() )
 			return;
 
