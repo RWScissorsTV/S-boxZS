@@ -181,6 +181,7 @@ public sealed class ZombieSurvivalGame : GameObjectSystem, Global.IPlayerEvents,
 				data.ZombieSurvivalForm = ZombieSurvivalForm.None;
 				data.ZombieSurvivalAlive = true;
 				data.ZombieSurvivalBuildPoints = 0;
+				data.ZombieSurvivalResetEconomyHost( StartingCoins );
 			}
 		}
 	}
@@ -646,11 +647,15 @@ public sealed class ZombieSurvivalGame : GameObjectSystem, Global.IPlayerEvents,
 		if ( !data.IsValid() )
 			return;
 
-		if ( Phase != ZombieSurvivalPhase.Build && !(Phase == ZombieSurvivalPhase.Survival && AllowBuyDuringSurvival) )
-		{
-			SendShopNotice( caller, "You cannot buy right now." );
-			return;
-		}
+		if (
+			Phase != ZombieSurvivalPhase.WaitingForPlayers
+			&& Phase != ZombieSurvivalPhase.Build
+			&& !(Phase == ZombieSurvivalPhase.Survival && AllowBuyDuringSurvival)
+)
+				{
+					SendShopNotice( caller, "You cannot buy right now." );
+					return;
+				}
 
 		if ( data.ZombieSurvivalRole != ZombieSurvivalRole.Human )
 		{

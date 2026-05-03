@@ -72,11 +72,11 @@
 
 			return ZS.Phase switch
 			{
+				ZombieSurvivalPhase.WaitingForPlayers => "Buy weapons while waiting for the round to start.",
 				ZombieSurvivalPhase.Build => "Buy weapons before the outbreak starts.",
 				ZombieSurvivalPhase.Survival when ZombieSurvivalGame.AllowBuyDuringSurvival => "Buy quickly. The round is live.",
 				ZombieSurvivalPhase.Survival => "Buying is disabled during survival.",
 				ZombieSurvivalPhase.RoundEnd => "Shop closed until next round.",
-				ZombieSurvivalPhase.WaitingForPlayers => "Waiting for players.",
 				_ => ""
 			};
 		}
@@ -87,15 +87,12 @@
 		get
 		{
 			if ( Data?.ZombieSurvivalRole == ZombieSurvivalRole.Zombie )
-				return "Zombies cannot buy";
-
-			if ( ZS?.Phase == ZombieSurvivalPhase.WaitingForPlayers )
-				return "Waiting for round";
+				return "Zombies Cannot Buy";
 
 			if ( ZS?.Phase == ZombieSurvivalPhase.RoundEnd )
-				return "Round ended";
+				return "Round Ended";
 
-			return "Shop unavailable";
+			return "Shop Unavailable";
 		}
 	}
 
@@ -131,6 +128,9 @@
 
 			if ( ZS is null )
 				return false;
+
+			if ( ZS.Phase == ZombieSurvivalPhase.WaitingForPlayers )
+				return true;
 
 			if ( ZS.Phase == ZombieSurvivalPhase.Build )
 				return true;

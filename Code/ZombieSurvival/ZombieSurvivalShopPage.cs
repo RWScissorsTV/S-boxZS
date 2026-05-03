@@ -2,7 +2,7 @@
 
 namespace Sandbox;
 
-[Title( "Human Shop" ), Order( 5 ), Icon( "shopping_cart" )]
+[Title( "Human Shop" ), Order( 5 ), Icon( "" )]
 public sealed class ZombieSurvivalShopPage : BaseSpawnMenu
 {
 	protected override void Rebuild()
