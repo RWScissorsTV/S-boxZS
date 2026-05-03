@@ -17,7 +17,10 @@ public static class ZombieSurvivalMenuRules
 		if ( !IsActive )
 			return true;
 
-		return type?.Name == "PropsPage";
+		if ( type is null )
+			return false;
+
+		return type.Name is "PropsPage" or "ZombieSurvivalShopPage";
 	}
 
 	public static bool ShowsUtilityTabs => !IsActive;
