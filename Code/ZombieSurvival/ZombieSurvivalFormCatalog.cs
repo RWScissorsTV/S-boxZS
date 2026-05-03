@@ -15,6 +15,7 @@ public sealed record ZombieSurvivalFormDefinition
 	/// This should point to a .vmdl that exists in Assets.
 	/// </summary>
 	public string ModelPath { get; init; } = "";
+
 	public string PreviewPath { get; init; } = "";
 
 	/// <summary>
@@ -40,7 +41,25 @@ public sealed record ZombieSurvivalFormDefinition
 	public float MeleeCooldown { get; init; } = 1.0f;
 
 	/// <summary>
-	/// Animator tuning. These do not force a specific animgraph, but the animator can use them.
+	/// Built-in PlayerController body/camera tuning for forms that are not citizen-shaped.
+	/// These values do not affect the visual model scale. They tune the controller/collider/view shape.
+	/// </summary>
+	public float BodyHeight { get; init; } = 72f;
+	public float BodyRadius { get; init; } = 16f;
+	public float DuckedHeight { get; init; } = 36f;
+	public float EyeDistanceFromTop { get; init; } = 8f;
+	public Vector3 CameraOffset { get; init; } = Vector3.Zero;
+	public float ReachLength { get; init; } = 85f;
+
+	/// <summary>
+	/// Zombie melee trace origin height from the player's world position.
+	/// This keeps short forms like headcrab from attacking from citizen eye height.
+	/// </summary>
+	public float MeleeOriginHeight { get; init; } = 48f;
+
+	/// <summary>
+	/// Animator tuning.
+	/// These do not force a specific animgraph, but the animator can use them.
 	/// </summary>
 	public float MoveSpeedForFullBlend { get; init; } = 250f;
 	public float MinimumPlaybackRate { get; init; } = 0.75f;
@@ -68,7 +87,8 @@ public static class ZombieSurvivalFormCatalog
 		// The presenter/renderer can use the model's assigned animgraph by default.
 		AnimGraphPath = "",
 
-		// The original project used a much smaller walker presentation scale.
+		// Do not change this as part of camera/collider tuning.
+		// This is the current working visual presentation scale.
 		ModelScale = 0.5f,
 
 		// Tune these if the zombie appears floating/sunk/rotated after it becomes visible.
@@ -83,6 +103,16 @@ public static class ZombieSurvivalFormCatalog
 		MeleeRange = 90f,
 		MeleeRadius = 14f,
 		MeleeCooldown = 1.0f,
+
+		// Humanoid/citizen-like controller shape.
+		// These are fallback defaults and should feel like the normal player body.
+		BodyHeight = 72f,
+		BodyRadius = 16f,
+		DuckedHeight = 36f,
+		EyeDistanceFromTop = 8f,
+		CameraOffset = Vector3.Zero,
+		ReachLength = 85f,
+		MeleeOriginHeight = 48f,
 
 		MoveSpeedForFullBlend = 250f,
 		MinimumPlaybackRate = 0.75f,
@@ -114,7 +144,8 @@ public static class ZombieSurvivalFormCatalog
 		PreviewPath = "Model/hc2.vmdl",
 		AnimGraphPath = "",
 
-		// The original headcrab prefab root was scaled to 0.1.
+		// Do not change this as part of camera/collider tuning.
+		// This is the current working visual presentation scale.
 		ModelScale = 0.1f,
 
 		// Headcrab may need to be lowered/raised after visibility is confirmed.
@@ -129,6 +160,16 @@ public static class ZombieSurvivalFormCatalog
 		MeleeRange = 68f,
 		MeleeRadius = 18f,
 		MeleeCooldown = 0.8f,
+
+		// Short creature controller shape.
+		// These tune collider/camera/reach only. They do not affect visual model scale.
+		BodyHeight = 28f,
+		BodyRadius = 14f,
+		DuckedHeight = 20f,
+		EyeDistanceFromTop = 5f,
+		CameraOffset = Vector3.Zero,
+		ReachLength = 55f,
+		MeleeOriginHeight = 22f,
 
 		MoveSpeedForFullBlend = 250f,
 		MinimumPlaybackRate = 0.80f,
@@ -157,8 +198,7 @@ public static class ZombieSurvivalFormCatalog
 		};
 	}
 
-	public static IEnumerable<ZombieSurvivalFormDefinition> All =>
-		new[] { Walker, Headcrab }.OrderBy( x => x.SortOrder );
+	public static IEnumerable<ZombieSurvivalFormDefinition> All => new[] { Walker, Headcrab }.OrderBy( x => x.SortOrder );
 
 	public static ZombieSurvivalForm FromConVarValue( int value )
 	{

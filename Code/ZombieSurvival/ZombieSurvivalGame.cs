@@ -90,6 +90,15 @@ public sealed class ZombieSurvivalGame : GameObjectSystem, Global.IPlayerEvents,
 	private TimeUntil _phaseTimer;
 	private TimeUntil _stateBroadcastCooldown;
 
+	private bool _hasDefaultControllerShape;
+
+	private float _defaultBodyHeight = 72f;
+	private float _defaultBodyRadius = 16f;
+	private float _defaultDuckedHeight = 36f;
+	private float _defaultEyeDistanceFromTop = 8f;
+	private Vector3 _defaultCameraOffset = Vector3.Zero;
+	private float _defaultReachLength = 85f;
+
 	/// <summary>
 	/// Prevents coins from being reset every tick while waiting.
 	/// Also prevents waiting-phase purchases from becoming free when the build phase starts.
@@ -449,8 +458,8 @@ public sealed class ZombieSurvivalGame : GameObjectSystem, Global.IPlayerEvents,
 		player.Health = preserveHealthFraction
 			? Math.Clamp( player.MaxHealth * previousHealthFraction, 1f, player.MaxHealth )
 			: player.MaxHealth;
-		player.Armour = 0f;
 
+		player.Armour = 0f;
 		data.ZombieSurvivalAlive = true;
 
 		if ( player.Controller.IsValid() )
@@ -466,6 +475,8 @@ public sealed class ZombieSurvivalGame : GameObjectSystem, Global.IPlayerEvents,
 				player.Controller.WalkSpeed = HumanWalkSpeed;
 				player.Controller.RunSpeed = HumanRunSpeed;
 			}
+
+			ApplyControllerShapeForRole( player, zombieForm );
 		}
 
 		var attack = player.GameObject.GetOrAddComponent<ZombieSurvivalZombieAttack>();
@@ -486,21 +497,71 @@ public sealed class ZombieSurvivalGame : GameObjectSystem, Global.IPlayerEvents,
 		if ( isZombie )
 		{
 			StripZombieInventory( player );
+
 			if ( inventory.IsValid() )
 				inventory.Enabled = false;
+
 			if ( loadout.IsValid() )
 				loadout.Enabled = false;
+
 			_ = StripZombieInventoryNextFrame( player );
 		}
 		else
 		{
 			if ( inventory.IsValid() )
 				inventory.Enabled = true;
+
 			if ( loadout.IsValid() )
 				loadout.Enabled = true;
 		}
 
 		player.GameObject.Network?.Refresh();
+	}
+
+	private void CaptureDefaultControllerShapeIfNeeded( PlayerController controller )
+	{
+		if ( _hasDefaultControllerShape || !controller.IsValid() )
+			return;
+
+		_defaultBodyHeight = controller.BodyHeight;
+		_defaultBodyRadius = controller.BodyRadius;
+		_defaultDuckedHeight = controller.DuckedHeight;
+		_defaultEyeDistanceFromTop = controller.EyeDistanceFromTop;
+		_defaultCameraOffset = controller.CameraOffset;
+		_defaultReachLength = controller.ReachLength;
+
+		_hasDefaultControllerShape = true;
+	}
+
+	private void ApplyControllerShapeForRole( Player player, ZombieSurvivalFormDefinition zombieForm )
+	{
+		if ( !player.IsValid() || !player.PlayerData.IsValid() || !player.Controller.IsValid() )
+			return;
+
+		var controller = player.Controller;
+		CaptureDefaultControllerShapeIfNeeded( controller );
+
+		var isHeadcrab =
+			player.PlayerData.ZombieSurvivalRole == ZombieSurvivalRole.Zombie
+			&& player.PlayerData.ZombieSurvivalForm == ZombieSurvivalForm.Headcrab;
+
+		if ( isHeadcrab )
+		{
+			controller.BodyHeight = zombieForm.BodyHeight;
+			controller.BodyRadius = zombieForm.BodyRadius;
+			controller.DuckedHeight = zombieForm.DuckedHeight;
+			controller.EyeDistanceFromTop = zombieForm.EyeDistanceFromTop;
+			controller.CameraOffset = zombieForm.CameraOffset;
+			controller.ReachLength = zombieForm.ReachLength;
+			return;
+		}
+
+		controller.BodyHeight = _defaultBodyHeight;
+		controller.BodyRadius = _defaultBodyRadius;
+		controller.DuckedHeight = _defaultDuckedHeight;
+		controller.EyeDistanceFromTop = _defaultEyeDistanceFromTop;
+		controller.CameraOffset = _defaultCameraOffset;
+		controller.ReachLength = _defaultReachLength;
 	}
 
 	private async Task StripZombieInventoryNextFrame( Player player )
@@ -522,6 +583,7 @@ public sealed class ZombieSurvivalGame : GameObjectSystem, Global.IPlayerEvents,
 			return;
 
 		var inventory = player.GetComponent<PlayerInventory>();
+
 		if ( !inventory.IsValid() )
 			return;
 
