@@ -197,6 +197,7 @@ public sealed class ZombieSurvivalGame : GameObjectSystem, Global.IPlayerEvents,
 			{
 				data.ZombieSurvivalRole = ZombieSurvivalRole.Human;
 				data.ZombieSurvivalForm = ZombieSurvivalForm.None;
+				data.ZombieSurvivalFormVisualScale = 1f;
 				data.ZombieSurvivalAlive = true;
 				data.ZombieSurvivalBuildPoints = 0;
 			}
@@ -235,6 +236,7 @@ public sealed class ZombieSurvivalGame : GameObjectSystem, Global.IPlayerEvents,
 		{
 			data.ZombieSurvivalRole = ZombieSurvivalRole.Human;
 			data.ZombieSurvivalForm = ZombieSurvivalForm.None;
+			data.ZombieSurvivalFormVisualScale = 1f;
 			data.ZombieSurvivalAlive = true;
 			data.ZombieSurvivalBuildPoints = 0;
 
@@ -269,6 +271,7 @@ public sealed class ZombieSurvivalGame : GameObjectSystem, Global.IPlayerEvents,
 		{
 			data.ZombieSurvivalRole = ZombieSurvivalRole.Human;
 			data.ZombieSurvivalForm = ZombieSurvivalForm.None;
+			data.ZombieSurvivalFormVisualScale = 1f;
 			data.ZombieSurvivalAlive = true;
 
 			if ( data.ZombieSurvivalRequestedForm == ZombieSurvivalForm.None )
@@ -296,6 +299,7 @@ public sealed class ZombieSurvivalGame : GameObjectSystem, Global.IPlayerEvents,
 		{
 			data.ZombieSurvivalRole = ZombieSurvivalRole.Human;
 			data.ZombieSurvivalForm = ZombieSurvivalForm.None;
+			data.ZombieSurvivalFormVisualScale = 1f;
 			data.ZombieSurvivalAlive = true;
 			data.ZombieSurvivalBuildPoints = 0;
 
@@ -307,8 +311,12 @@ public sealed class ZombieSurvivalGame : GameObjectSystem, Global.IPlayerEvents,
 
 		foreach ( var zombie in players.OrderBy( _ => Guid.NewGuid() ).Take( zombieCount ) )
 		{
+			var selectedForm = GetPreferredZombieForm( zombie );
+			var selectedDefinition = ZombieSurvivalFormCatalog.Get( selectedForm );
+
 			zombie.ZombieSurvivalRole = ZombieSurvivalRole.Zombie;
-			zombie.ZombieSurvivalForm = GetPreferredZombieForm( zombie );
+			zombie.ZombieSurvivalForm = selectedForm;
+			zombie.ZombieSurvivalFormVisualScale = selectedDefinition.ModelScale;
 		}
 
 		ApplyRolesToSpawnedPlayers();
@@ -440,13 +448,18 @@ public sealed class ZombieSurvivalGame : GameObjectSystem, Global.IPlayerEvents,
 
 		var zombieForm = ZombieSurvivalFormCatalog.Get( data.ZombieSurvivalForm );
 
+		if ( isZombie )
+			data.ZombieSurvivalFormVisualScale = zombieForm.ModelScale;
+		else
+			data.ZombieSurvivalFormVisualScale = 1f;
+
 		player.GameObject.Tags.Remove( "human" );
 		player.GameObject.Tags.Remove( "zombie" );
 		player.GameObject.Tags.Add( isZombie ? "zombie" : "human" );
 
 		if ( isZombie )
 		{
-			player.MaxHealth = data.ZombieSurvivalForm == ZombieSurvivalForm.Headcrab ? zombieForm.Health : ZombieHealth;
+			player.MaxHealth = zombieForm.Health;
 		}
 		else
 		{
@@ -464,8 +477,8 @@ public sealed class ZombieSurvivalGame : GameObjectSystem, Global.IPlayerEvents,
 		{
 			if ( isZombie )
 			{
-				player.Controller.WalkSpeed = data.ZombieSurvivalForm == ZombieSurvivalForm.Headcrab ? zombieForm.WalkSpeed : ZombieWalkSpeed;
-				player.Controller.RunSpeed = data.ZombieSurvivalForm == ZombieSurvivalForm.Headcrab ? zombieForm.RunSpeed : ZombieRunSpeed;
+				player.Controller.WalkSpeed = zombieForm.WalkSpeed;
+				player.Controller.RunSpeed = zombieForm.RunSpeed;
 				player.Controller.ThirdPerson = true;
 			}
 			else
@@ -534,11 +547,9 @@ public sealed class ZombieSurvivalGame : GameObjectSystem, Global.IPlayerEvents,
 		var controller = player.Controller;
 		CaptureDefaultControllerShapeIfNeeded( controller );
 
-		var isHeadcrab =
-			player.PlayerData.ZombieSurvivalRole == ZombieSurvivalRole.Zombie
-			&& player.PlayerData.ZombieSurvivalForm == ZombieSurvivalForm.Headcrab;
+		var isZombie = player.PlayerData.ZombieSurvivalRole == ZombieSurvivalRole.Zombie;
 
-		if ( isHeadcrab )
+		if ( isZombie )
 		{
 			controller.BodyHeight = zombieForm.BodyHeight;
 			controller.BodyRadius = zombieForm.BodyRadius;
@@ -667,6 +678,7 @@ public sealed class ZombieSurvivalGame : GameObjectSystem, Global.IPlayerEvents,
 		{
 			player.PlayerData.ZombieSurvivalRole = ZombieSurvivalRole.Human;
 			player.PlayerData.ZombieSurvivalForm = ZombieSurvivalForm.None;
+			player.PlayerData.ZombieSurvivalFormVisualScale = 1f;
 			player.PlayerData.ZombieSurvivalAlive = true;
 
 			if ( player.PlayerData.ZombieSurvivalRequestedForm == ZombieSurvivalForm.None )
@@ -701,8 +713,12 @@ public sealed class ZombieSurvivalGame : GameObjectSystem, Global.IPlayerEvents,
 
 		if ( Phase == ZombieSurvivalPhase.Survival && data.ZombieSurvivalRole == ZombieSurvivalRole.Human )
 		{
+			var selectedForm = GetPreferredZombieForm( data );
+			var selectedDefinition = ZombieSurvivalFormCatalog.Get( selectedForm );
+
 			data.ZombieSurvivalRole = ZombieSurvivalRole.Zombie;
-			data.ZombieSurvivalForm = GetPreferredZombieForm( data );
+			data.ZombieSurvivalForm = selectedForm;
+			data.ZombieSurvivalFormVisualScale = selectedDefinition.ModelScale;
 
 			PostSystemText( $"{data.DisplayName} has joined the zombies." );
 		}
@@ -853,6 +869,7 @@ public sealed class ZombieSurvivalGame : GameObjectSystem, Global.IPlayerEvents,
 
 		data.ZombieSurvivalSetRequestedFormHost( form );
 		data.ZombieSurvivalForm = form;
+		data.ZombieSurvivalFormVisualScale = ZombieSurvivalFormCatalog.Get( form ).ModelScale;
 
 		var player = FindPlayerForData( data );
 

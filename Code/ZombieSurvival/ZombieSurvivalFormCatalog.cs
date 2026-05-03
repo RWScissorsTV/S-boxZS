@@ -59,26 +59,19 @@ public sealed record ZombieSurvivalFormDefinition
 
 public static class ZombieSurvivalFormCatalog
 {
-	private static readonly ZombieSurvivalFormDefinition Walker = new()
+	private static ZombieSurvivalFormDefinition Walker => new()
 	{
 		Form = ZombieSurvivalForm.Walker,
 		DisplayName = "Zombie",
 		Description = "Balanced undead bruiser with solid health and reach.",
 		SortOrder = 10,
 
-		// Keep these paths matching your current imported assets.
-		// If the player still becomes invisible, this is the first thing to verify in the Asset Browser.
 		ModelPath = "Model/Zombie/zombie.vmdl",
 		PreviewPath = "Model/Zombie/zombie.vmdl",
-
-		// Leave empty unless you know the exact animgraph path.
-		// The presenter/renderer can use the model's assigned animgraph by default.
 		AnimGraphPath = "",
 
-		// Keep walker scale fixed so host and clients see the same visual size.
-		ModelScale = 0.3f,
+		ModelScale = 0.35f,
 
-		// Tune these if the zombie appears floating/sunk/rotated after it becomes visible.
 		LocalPosition = Vector3.Zero,
 		LocalAngles = Angles.Zero,
 
@@ -103,21 +96,21 @@ public static class ZombieSurvivalFormCatalog
 		MaximumPlaybackRate = 1.35f,
 
 		AttackSoundPaths = new[]
-		{
-			"sounds/zombieattack1.sound",
-			"sounds/zombieattack2.sound"
-		},
+	{
+		"sounds/zombieattack1.sound",
+		"sounds/zombieattack2.sound"
+	},
 
 		AmbientSoundPaths = new[]
-		{
-			"sounds/zombiegroan1.sound",
-			"sounds/zombiegroan2.sound",
-			"sounds/zombiegroan3.sound",
-			"sounds/zombiegroan4.sound"
-		}
+	{
+		"sounds/zombiegroan1.sound",
+		"sounds/zombiegroan2.sound",
+		"sounds/zombiegroan3.sound",
+		"sounds/zombiegroan4.sound"
+	}
 	};
 
-	private static readonly ZombieSurvivalFormDefinition Headcrab = new()
+	private static ZombieSurvivalFormDefinition Headcrab = new()
 	{
 		Form = ZombieSurvivalForm.Headcrab,
 		DisplayName = "Headcrab",

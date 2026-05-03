@@ -4,6 +4,9 @@ using Sandbox;
 public sealed partial class PlayerData
 {
 	[Sync( SyncFlags.FromHost )]
+	public float ZombieSurvivalFormVisualScale { get; set; } = 1f;
+
+	[Sync( SyncFlags.FromHost )]
 	public ZombieSurvivalRole ZombieSurvivalRole { get; set; } = ZombieSurvivalRole.Unassigned;
 
 	[Sync( SyncFlags.FromHost )]
