@@ -9,6 +9,7 @@ public sealed class ZombieSurvivalGame : GameObjectSystem, Global.IPlayerEvents,
 
 {
 	public static ZombieSurvivalGame Current { get; private set; }
+
 	[ConVar( "zs.enabled", ConVarFlags.Replicated | ConVarFlags.Server | ConVarFlags.GameSetting )]
 	public static bool Enabled { get; set; } = true;
 

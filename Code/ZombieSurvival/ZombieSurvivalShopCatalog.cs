@@ -17,22 +17,32 @@ public sealed class ZombieSurvivalShopItem
 	public string DisplayName { get; init; } = "";
 	public string Description { get; init; } = "";
 	public int Cost { get; init; }
+
 	public ZombieSurvivalShopItemType Type { get; init; } = ZombieSurvivalShopItemType.Weapon;
 
 	/// <summary>
-	/// Optional prefab/resource path used later by the buy system.
-	/// This is intentionally data-only right now so the catalog does not fight the sandbox base inventory system.
+	/// For weapons, this should point to the actual prefab that PlayerInventory.Pickup() can spawn.
+	/// Example: weapons/Glock/glock.prefab
 	/// </summary>
 	public string ResourcePath { get; init; } = "";
 
 	/// <summary>
-	/// Optional weapon/component class name used later if the inventory gives weapons by type instead of prefab.
+	/// Optional class name reference for future logic/debugging.
+	/// The current buy system should prefer ResourcePath.
 	/// </summary>
 	public string ClassName { get; init; } = "";
 
 	public string Category { get; init; } = "Weapons";
 
+	/// <summary>
+	/// Keep unfinished systems hidden until their buy behavior is actually wired.
+	/// </summary>
 	public bool IsEnabled { get; init; } = true;
+
+	/// <summary>
+	/// Used for display sorting inside each category.
+	/// </summary>
+	public int SortOrder { get; init; }
 }
 
 public static class ZombieSurvivalShopCatalog
@@ -43,12 +53,13 @@ public static class ZombieSurvivalShopCatalog
 		{
 			Id = "crowbar",
 			DisplayName = "Crowbar",
-			Description = "Basic melee weapon. Cheap and reliable.",
+			Description = "Free backup melee weapon.",
 			Cost = 0,
 			Type = ZombieSurvivalShopItemType.Weapon,
 			Category = "Melee",
+			SortOrder = 10,
 			ClassName = "CrowbarWeapon",
-			ResourcePath = "weapons/Crowbar"
+			ResourcePath = "weapons/Crowbar/crowbar.prefab"
 		},
 
 		new()
@@ -59,8 +70,9 @@ public static class ZombieSurvivalShopCatalog
 			Cost = 25,
 			Type = ZombieSurvivalShopItemType.Weapon,
 			Category = "Pistols",
+			SortOrder = 20,
 			ClassName = "GlockWeapon",
-			ResourcePath = "weapons/Glock"
+			ResourcePath = "weapons/Glock/glock.prefab"
 		},
 
 		new()
@@ -68,11 +80,12 @@ public static class ZombieSurvivalShopCatalog
 			Id = "colt1911",
 			DisplayName = "Colt 1911",
 			Description = "Stronger pistol with better stopping power.",
-			Cost = 40,
+			Cost = 45,
 			Type = ZombieSurvivalShopItemType.Weapon,
 			Category = "Pistols",
+			SortOrder = 30,
 			ClassName = "Colt1911Weapon",
-			ResourcePath = "weapons/Colt1911"
+			ResourcePath = "weapons/Colt1911/colt1911.prefab"
 		},
 
 		new()
@@ -83,8 +96,9 @@ public static class ZombieSurvivalShopCatalog
 			Cost = 90,
 			Type = ZombieSurvivalShopItemType.Weapon,
 			Category = "SMGs",
+			SortOrder = 40,
 			ClassName = "Mp5Weapon",
-			ResourcePath = "weapons/Mp5"
+			ResourcePath = "weapons/Mp5/mp5.prefab"
 		},
 
 		new()
@@ -95,8 +109,9 @@ public static class ZombieSurvivalShopCatalog
 			Cost = 110,
 			Type = ZombieSurvivalShopItemType.Weapon,
 			Category = "Shotguns",
+			SortOrder = 50,
 			ClassName = "ShotgunWeapon",
-			ResourcePath = "weapons/Shotgun"
+			ResourcePath = "weapons/Shotgun/shotgun.prefab"
 		},
 
 		new()
@@ -107,8 +122,9 @@ public static class ZombieSurvivalShopCatalog
 			Cost = 150,
 			Type = ZombieSurvivalShopItemType.Weapon,
 			Category = "Rifles",
+			SortOrder = 60,
 			ClassName = "M4a1Weapon",
-			ResourcePath = "weapons/M4a1"
+			ResourcePath = "weapons/M4a1/m4a1.prefab"
 		},
 
 		new()
@@ -119,20 +135,9 @@ public static class ZombieSurvivalShopCatalog
 			Cost = 175,
 			Type = ZombieSurvivalShopItemType.Weapon,
 			Category = "Rifles",
+			SortOrder = 70,
 			ClassName = "SniperWeapon",
-			ResourcePath = "weapons/Sniper"
-		},
-
-		new()
-		{
-			Id = "rpg",
-			DisplayName = "RPG",
-			Description = "Expensive explosive weapon. Use carefully.",
-			Cost = 250,
-			Type = ZombieSurvivalShopItemType.Weapon,
-			Category = "Heavy",
-			ClassName = "RpgWeapon",
-			ResourcePath = "weapons/Rpg"
+			ResourcePath = "weapons/Sniper/sniper.prefab"
 		},
 
 		new()
@@ -143,10 +148,25 @@ public static class ZombieSurvivalShopCatalog
 			Cost = 60,
 			Type = ZombieSurvivalShopItemType.Weapon,
 			Category = "Explosives",
+			SortOrder = 80,
 			ClassName = "HandGrenadeWeapon",
-			ResourcePath = "weapons/Grenade"
+			ResourcePath = "weapons/HandGrenade/handgrenade.prefab"
 		},
 
+		new()
+		{
+			Id = "rpg",
+			DisplayName = "RPG",
+			Description = "Expensive explosive weapon. Use carefully.",
+			Cost = 250,
+			Type = ZombieSurvivalShopItemType.Weapon,
+			Category = "Heavy",
+			SortOrder = 90,
+			ClassName = "RpgWeapon",
+			ResourcePath = "weapons/Rpg/rpg.prefab"
+		},
+
+		// These are intentionally disabled until we wire ammo purchasing in ZombieSurvivalGame.
 		new()
 		{
 			Id = "pistol_ammo",
@@ -155,7 +175,9 @@ public static class ZombieSurvivalShopCatalog
 			Cost = 15,
 			Type = ZombieSurvivalShopItemType.Ammo,
 			Category = "Ammo",
-			ResourcePath = "ammo/pistol"
+			SortOrder = 100,
+			ResourcePath = "ammo/pistol",
+			IsEnabled = false
 		},
 
 		new()
@@ -166,7 +188,9 @@ public static class ZombieSurvivalShopCatalog
 			Cost = 25,
 			Type = ZombieSurvivalShopItemType.Ammo,
 			Category = "Ammo",
-			ResourcePath = "ammo/smg"
+			SortOrder = 110,
+			ResourcePath = "ammo/smg",
+			IsEnabled = false
 		},
 
 		new()
@@ -177,7 +201,9 @@ public static class ZombieSurvivalShopCatalog
 			Cost = 35,
 			Type = ZombieSurvivalShopItemType.Ammo,
 			Category = "Ammo",
-			ResourcePath = "ammo/rifle"
+			SortOrder = 120,
+			ResourcePath = "ammo/rifle",
+			IsEnabled = false
 		},
 
 		new()
@@ -188,44 +214,66 @@ public static class ZombieSurvivalShopCatalog
 			Cost = 30,
 			Type = ZombieSurvivalShopItemType.Ammo,
 			Category = "Ammo",
-			ResourcePath = "ammo/shotgun"
+			SortOrder = 130,
+			ResourcePath = "ammo/shotgun",
+			IsEnabled = false
 		},
 
+		// Disabled until medical item behavior exists.
 		new()
 		{
 			Id = "medkit",
 			DisplayName = "Medkit",
-			Description = "Restores health. Placeholder until medical item behavior is wired.",
+			Description = "Restores health.",
 			Cost = 50,
 			Type = ZombieSurvivalShopItemType.Medical,
 			Category = "Medical",
-			ResourcePath = "items/medkit"
+			SortOrder = 140,
+			ResourcePath = "items/medkit",
+			IsEnabled = false
 		},
 
+		// Disabled until repair/fortify tool behavior exists.
 		new()
 		{
 			Id = "repair_tool",
 			DisplayName = "Repair Tool",
-			Description = "Repairs barricades. Placeholder until repair tool behavior is wired.",
+			Description = "Repairs and fortifies barricades.",
 			Cost = 75,
 			Type = ZombieSurvivalShopItemType.Utility,
 			Category = "Tools",
-			ResourcePath = "tools/repair"
+			SortOrder = 150,
+			ResourcePath = "tools/repair",
+			IsEnabled = false
 		}
 	};
 
-	public static IEnumerable<ZombieSurvivalShopItem> All => Items.Where( x => x.IsEnabled );
+	public static IEnumerable<ZombieSurvivalShopItem> All =>
+		Items
+			.Where( x => x.IsEnabled )
+			.OrderBy( x => GetCategorySortOrder( x.Category ) )
+			.ThenBy( x => x.SortOrder )
+			.ThenBy( x => x.DisplayName );
 
-	public static IEnumerable<ZombieSurvivalShopItem> Weapons => All.Where( x => x.Type == ZombieSurvivalShopItemType.Weapon );
-	public static IEnumerable<ZombieSurvivalShopItem> Ammo => All.Where( x => x.Type == ZombieSurvivalShopItemType.Ammo );
-	public static IEnumerable<ZombieSurvivalShopItem> Utility => All.Where( x => x.Type == ZombieSurvivalShopItemType.Utility );
-	public static IEnumerable<ZombieSurvivalShopItem> Medical => All.Where( x => x.Type == ZombieSurvivalShopItemType.Medical );
+	public static IEnumerable<ZombieSurvivalShopItem> Weapons =>
+		All.Where( x => x.Type == ZombieSurvivalShopItemType.Weapon );
 
-	public static IEnumerable<string> Categories => All
-		.Select( x => x.Category )
-		.Where( x => !string.IsNullOrWhiteSpace( x ) )
-		.Distinct()
-		.OrderBy( x => x );
+	public static IEnumerable<ZombieSurvivalShopItem> Ammo =>
+		All.Where( x => x.Type == ZombieSurvivalShopItemType.Ammo );
+
+	public static IEnumerable<ZombieSurvivalShopItem> Utility =>
+		All.Where( x => x.Type == ZombieSurvivalShopItemType.Utility );
+
+	public static IEnumerable<ZombieSurvivalShopItem> Medical =>
+		All.Where( x => x.Type == ZombieSurvivalShopItemType.Medical );
+
+	public static IEnumerable<string> Categories =>
+		All
+			.Select( x => x.Category )
+			.Where( x => !string.IsNullOrWhiteSpace( x ) )
+			.Distinct()
+			.OrderBy( GetCategorySortOrder )
+			.ThenBy( x => x );
 
 	public static IEnumerable<ZombieSurvivalShopItem> ByCategory( string category )
 	{
@@ -246,5 +294,23 @@ public static class ZombieSurvivalShopCatalog
 	public static bool Exists( string id )
 	{
 		return Find( id ) is not null;
+	}
+
+	private static int GetCategorySortOrder( string category )
+	{
+		return category switch
+		{
+			"Melee" => 10,
+			"Pistols" => 20,
+			"SMGs" => 30,
+			"Shotguns" => 40,
+			"Rifles" => 50,
+			"Explosives" => 60,
+			"Heavy" => 70,
+			"Ammo" => 80,
+			"Tools" => 90,
+			"Medical" => 100,
+			_ => 1000
+		};
 	}
 }
