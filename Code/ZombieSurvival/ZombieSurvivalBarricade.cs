@@ -64,10 +64,14 @@ public sealed class ZombieSurvivalBarricade : Component, Component.IDamageable, 
 
 	IPressable.Tooltip? IPressable.GetTooltip( IPressable.Event e )
 	{
-		if ( !CanHumanInteract( e.Source.GameObject ) )
-			return new IPressable.Tooltip( "Can't repair", "block", "Humans only" );
-
 		var healthText = $"{MathF.Ceiling( Health )}/{MathF.Ceiling( MaxHealth )}";
+		var player = GetSourcePlayer( e.Source.GameObject );
+
+		if ( player.IsValid() && player.PlayerData.IsValid() && player.PlayerData.ZombieSurvivalRole == ZombieSurvivalRole.Zombie )
+			return new IPressable.Tooltip( "Break", "construction", healthText );
+
+		if ( !CanHumanInteract( e.Source.GameObject ) )
+			return new IPressable.Tooltip( "Barricade", "construction", healthText );
 
 		if ( Health < MaxHealth )
 			return new IPressable.Tooltip( "Repair", "construction", healthText );
@@ -158,9 +162,6 @@ public sealed class ZombieSurvivalBarricade : Component, Component.IDamageable, 
 
 	private bool CanHumanInteract( GameObject source )
 	{
-		if ( !source.IsValid() )
-			return false;
-
 		var game = ZombieSurvivalGame.Current;
 		if ( game is null )
 			return false;
@@ -168,12 +169,20 @@ public sealed class ZombieSurvivalBarricade : Component, Component.IDamageable, 
 		if ( game.Phase != ZombieSurvivalPhase.Build && game.Phase != ZombieSurvivalPhase.Survival )
 			return false;
 
-		var player = source.Root.GetComponent<Player>();
+		var player = GetSourcePlayer( source );
 		if ( !player.IsValid() || !player.PlayerData.IsValid() )
 			return false;
 
 		return player.PlayerData.ZombieSurvivalAlive
 			&& player.PlayerData.ZombieSurvivalRole == ZombieSurvivalRole.Human;
+	}
+
+	private static Player GetSourcePlayer( GameObject source )
+	{
+		if ( !source.IsValid() )
+			return null;
+
+		return source.Root.GetComponent<Player>();
 	}
 
 	[Rpc.Broadcast]

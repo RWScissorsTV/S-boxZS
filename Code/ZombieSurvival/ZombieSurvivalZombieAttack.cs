@@ -1,8 +1,15 @@
 using System;
 using System.Collections.Generic;
+using Sandbox.CameraNoise;
 
 public sealed class ZombieSurvivalZombieAttack : Component
 {
+	private const string HumanFirstPersonArmsModelPath = "models/first_person/v_first_person_arms_human.vmdl";
+	private const string FallbackFirstPersonArmsModelPath = "Model/First Person/first_person_arms_preview.vmdl";
+
+	[ConVar( "zs.zombie_ambient_enabled", ConVarFlags.Replicated | ConVarFlags.Server | ConVarFlags.GameSetting )]
+	public static bool AmbientEnabled { get; set; } = false;
+
 	[Property] public float Damage { get; set; } = 25f;
 	[Property] public float Range { get; set; } = 90f;
 	[Property] public float Radius { get; set; } = 14f;
@@ -16,6 +23,9 @@ public sealed class ZombieSurvivalZombieAttack : Component
 
 	private TimeUntil _timeUntilNextAttack;
 	private TimeUntil _timeUntilAmbientSound;
+	private GameObject _firstPersonViewModel;
+	private ViewModel _firstPersonViewModelController;
+	private ZombieSurvivalFirstPersonPunchViewModel _firstPersonPunchViewModel;
 
 	protected override void OnStart()
 	{
@@ -24,20 +34,32 @@ public sealed class ZombieSurvivalZombieAttack : Component
 
 	protected override void OnUpdate()
 	{
+		UpdateFirstPersonViewModel();
+
 		if ( IsProxy )
 			return;
 
 		if ( !IsControlledZombie() )
 			return;
 
-		if ( Input.Pressed( "attack1" ) )
+		if ( Input.Down( "attack1" ) )
 			RequestAttack();
 
-		if ( _timeUntilAmbientSound <= 0f )
+		if ( AmbientEnabled && _timeUntilAmbientSound <= 0f )
 		{
 			RpcAmbientEffects();
 			ResetAmbientDelay();
 		}
+	}
+
+	protected override void OnDisabled()
+	{
+		DestroyFirstPersonViewModel();
+	}
+
+	protected override void OnDestroy()
+	{
+		DestroyFirstPersonViewModel();
 	}
 
 	public void ConfigureForForm( ZombieSurvivalForm form )
@@ -104,19 +126,16 @@ public sealed class ZombieSurvivalZombieAttack : Component
 		_timeUntilNextAttack = MathF.Max( Cooldown, 0.05f );
 
 		var ray = player.EyeTransform.ForwardRay;
-		var trace = Scene.Trace.Ray( ray, Range )
-			.IgnoreGameObjectHierarchy( GameObject )
-			.WithoutTags( "playercontroller" )
-			.Radius( Radius )
-			.UseHitboxes()
-			.Run();
+		var trace = TraceAttackTarget( ray, useHitboxes: true );
+		if ( !trace.Hit )
+			trace = TraceAttackTarget( ray, useHitboxes: false );
 
 		RpcAttackEffects( trace.Hit, trace.EndPosition );
 
 		if ( !trace.Hit || !trace.GameObject.IsValid() )
 			return;
 
-		var damageable = trace.GameObject.GetComponentInParent<Component.IDamageable>( true );
+		var damageable = ResolveDamageable( trace.GameObject );
 		if ( damageable is not null )
 		{
 			var damageInfo = new DamageInfo( Damage, GameObject, GameObject )
@@ -134,6 +153,31 @@ public sealed class ZombieSurvivalZombieAttack : Component
 		}
 	}
 
+	private SceneTraceResult TraceAttackTarget( Ray ray, bool useHitboxes )
+	{
+		var trace = Scene.Trace.Ray( ray, Range )
+			.IgnoreGameObjectHierarchy( GameObject )
+			.WithoutTags( "playercontroller" )
+			.Radius( Radius );
+
+		if ( useHitboxes )
+			trace = trace.UseHitboxes();
+
+		return trace.Run();
+	}
+
+	private static Component.IDamageable ResolveDamageable( GameObject target )
+	{
+		if ( !target.IsValid() )
+			return null;
+
+		var barricade = target.GetComponentInParent<ZombieSurvivalBarricade>( true );
+		if ( barricade.IsValid() )
+			return barricade;
+
+		return target.GetComponentInParent<Component.IDamageable>( true );
+	}
+
 	[Rpc.Broadcast]
 	private void RpcAttackEffects( bool hit, Vector3 hitPosition )
 	{
@@ -142,6 +186,13 @@ public sealed class ZombieSurvivalZombieAttack : Component
 		{
 			player.Controller?.Renderer?.Set( "b_attack", true );
 			player.GetComponent<ZombieSurvivalZombieFormPresenter>()?.TriggerAttack();
+		}
+
+		if ( player.IsValid() && player.IsLocalPlayer )
+		{
+			TriggerFirstPersonAttackViewModel();
+			_ = new Punch( new Vector3( Random.Shared.Float( -8f, -12f ), Random.Shared.Float( -6f, 6f ), 0f ), 0.9f, 2.2f, 0.35f );
+			_ = new Shake( hit ? 0.22f : 0.12f, hit ? 1.0f : 0.55f );
 		}
 
 		PlayRandomSound( AttackSounds, WorldPosition );
@@ -185,5 +236,96 @@ public sealed class ZombieSurvivalZombieAttack : Component
 		}
 
 		return sounds.ToArray();
+	}
+
+	private void UpdateFirstPersonViewModel()
+	{
+		var player = GetComponent<Player>();
+
+		if ( ShouldShowFirstPersonViewModel( player ) )
+		{
+			EnsureFirstPersonViewModel();
+			return;
+		}
+
+		DestroyFirstPersonViewModel();
+	}
+
+	private static bool ShouldShowFirstPersonViewModel( Player player )
+	{
+		return player.IsValid()
+			&& player.IsLocalPlayer
+			&& player.PlayerData.IsValid()
+			&& player.PlayerData.ZombieSurvivalRole == ZombieSurvivalRole.Zombie
+			&& player.Controller.IsValid()
+			&& !player.Controller.ThirdPerson;
+	}
+
+	private void EnsureFirstPersonViewModel()
+	{
+		if ( _firstPersonViewModel.IsValid() )
+			return;
+
+		var model = LoadFirstPersonPunchModel();
+		if ( model is null || model.IsError )
+			return;
+
+		_firstPersonViewModel = new GameObject( true, "ZS Punch Viewmodel" );
+		_firstPersonViewModel.Flags |= GameObjectFlags.NotSaved | GameObjectFlags.NotNetworked | GameObjectFlags.Absolute;
+		_firstPersonViewModel.SetParent( GameObject, false );
+		_firstPersonViewModel.Enabled = true;
+		_firstPersonViewModel.Tags.Add( "firstperson", "viewmodel" );
+
+		_firstPersonViewModelController = _firstPersonViewModel.AddComponent<ViewModel>();
+
+		var visualRoot = new GameObject( true, "Punch Arms" );
+		visualRoot.SetParent( _firstPersonViewModel, false );
+		visualRoot.Enabled = true;
+
+		var renderer = visualRoot.AddComponent<SkinnedModelRenderer>();
+		renderer.Model = model;
+		renderer.Enabled = true;
+		renderer.UseAnimGraph = true;
+		renderer.CreateBoneObjects = true;
+
+		_firstPersonViewModelController.Renderer = renderer;
+		_firstPersonPunchViewModel = _firstPersonViewModel.AddComponent<ZombieSurvivalFirstPersonPunchViewModel>();
+		_firstPersonPunchViewModel.VisualRoot = visualRoot;
+		_firstPersonPunchViewModel.Renderer = renderer;
+
+		_firstPersonViewModelController.Deploy();
+	}
+
+	private void TriggerFirstPersonAttackViewModel()
+	{
+		if ( !_firstPersonViewModelController.IsValid() )
+			return;
+
+		_firstPersonViewModelController.OnAttack();
+		_firstPersonPunchViewModel?.TriggerPunch();
+	}
+
+	private void DestroyFirstPersonViewModel()
+	{
+		if ( _firstPersonViewModel.IsValid() )
+			_firstPersonViewModel.Destroy();
+
+		_firstPersonViewModel = null;
+		_firstPersonViewModelController = null;
+		_firstPersonPunchViewModel = null;
+	}
+
+	private static Model LoadFirstPersonPunchModel()
+	{
+		var model = Model.Load( HumanFirstPersonArmsModelPath );
+		if ( model is not null && !model.IsError )
+			return model;
+
+		model = Model.Load( FallbackFirstPersonArmsModelPath );
+		if ( model is not null && !model.IsError )
+			return model;
+
+		Log.Warning( $"Zombie Survival: failed to load first-person punch model '{HumanFirstPersonArmsModelPath}' or fallback '{FallbackFirstPersonArmsModelPath}'." );
+		return null;
 	}
 }

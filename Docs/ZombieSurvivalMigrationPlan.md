@@ -107,4 +107,6 @@ Two players join. After the build timer, one becomes a zombie. The zombie has a 
 - First ZS HUD pass is implemented in the shared system UI: phase, timer, role, objective, and human/zombie counts.
 - Q menu first pass is implemented: ZS mode shows the prop-focused spawn flow, uses build points for prop spawning, hides the utility/tool side, and blocks Toolgun actions while leaving the Physics Gun path intact.
 - Minimum zombie gameplay has been deepened with imported old zombie/headcrab model, animgraph, and sound assets. ZS now mounts those forms as a visual layer on the Sandbox player, keeping the base player/controller systems intact.
-- Next slice: in-game test and tune zombie form scale/collision/camera, then decide between Physics Gun/build feel or weapon purchase/loadout economy.
+- Zombie form selection now has a first-pass zombie-only shop tab, while the human shop stays hidden from zombies and the zombie shop stays hidden from humans.
+- Zombie form swapping now preserves current zombie health fraction instead of fully healing when a form changes.
+- Next slice: in-game test and tune zombie form scale/collision/camera, then deepen zombie abilities or return to human weapon/loadout economy.

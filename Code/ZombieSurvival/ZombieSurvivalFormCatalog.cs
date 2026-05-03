@@ -1,16 +1,21 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using Sandbox;
 
 public sealed record ZombieSurvivalFormDefinition
 {
 	public ZombieSurvivalForm Form { get; init; }
 	public string DisplayName { get; init; } = "";
+	public string Description { get; init; } = "";
+	public int SortOrder { get; init; }
 
 	/// <summary>
 	/// Main model path used by ZombieSurvivalZombieFormPresenter.
 	/// This should point to a .vmdl that exists in Assets.
 	/// </summary>
 	public string ModelPath { get; init; } = "";
+	public string PreviewPath { get; init; } = "";
 
 	/// <summary>
 	/// Optional explicit animgraph path. Leave empty if the model already has its animgraph assigned.
@@ -51,18 +56,20 @@ public static class ZombieSurvivalFormCatalog
 	{
 		Form = ZombieSurvivalForm.Walker,
 		DisplayName = "Zombie",
+		Description = "Balanced undead bruiser with solid health and reach.",
+		SortOrder = 10,
 
 		// Keep these paths matching your current imported assets.
 		// If the player still becomes invisible, this is the first thing to verify in the Asset Browser.
 		ModelPath = "Model/Zombie/zombie.vmdl",
+		PreviewPath = "Model/Zombie/zombie.vmdl",
 
 		// Leave empty unless you know the exact animgraph path.
 		// The presenter/renderer can use the model's assigned animgraph by default.
 		AnimGraphPath = "",
 
-		// Your old value was 0.3f. That is very easy to make invisible/tiny depending on import scale.
-		// Start at 1.0f so we can confirm the model is actually rendering, then tune down if needed.
-		ModelScale = 1.0f,
+		// The original project used a much smaller walker presentation scale.
+		ModelScale = 0.5f,
 
 		// Tune these if the zombie appears floating/sunk/rotated after it becomes visible.
 		LocalPosition = Vector3.Zero,
@@ -100,13 +107,15 @@ public static class ZombieSurvivalFormCatalog
 	{
 		Form = ZombieSurvivalForm.Headcrab,
 		DisplayName = "Headcrab",
+		Description = "Fast, smaller attacker with lower health and quicker strikes.",
+		SortOrder = 20,
 
 		ModelPath = "Model/hc2.vmdl",
+		PreviewPath = "Model/hc2.vmdl",
 		AnimGraphPath = "",
 
-		// Your old value was 0.1f. Same problem: maybe technically visible but microscopic.
-		// Start bigger while testing. Once visible, tune to taste.
-		ModelScale = 1.0f,
+		// The original headcrab prefab root was scaled to 0.1.
+		ModelScale = 0.1f,
 
 		// Headcrab may need to be lowered/raised after visibility is confirmed.
 		LocalPosition = Vector3.Zero,
@@ -147,6 +156,9 @@ public static class ZombieSurvivalFormCatalog
 			_ => Walker
 		};
 	}
+
+	public static IEnumerable<ZombieSurvivalFormDefinition> All =>
+		new[] { Walker, Headcrab }.OrderBy( x => x.SortOrder );
 
 	public static ZombieSurvivalForm FromConVarValue( int value )
 	{

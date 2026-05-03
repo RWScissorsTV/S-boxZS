@@ -219,11 +219,23 @@ public sealed class PlayerLoadout : Component, Local.IPlayerEvents, Global.IPlay
 		if ( player != Player ) return;
 		if ( !Networking.IsHost ) return;
 
+		if ( ShouldSkipSpawnRestore() )
+		{
+			ClearWeaponsWithoutSaving();
+			return;
+		}
+
 		_ = RestoreOnSpawnAsync();
 	}
 
 	private async Task RestoreOnSpawnAsync()
 	{
+		if ( ShouldSkipSpawnRestore() )
+		{
+			ClearWeaponsWithoutSaving();
+			return;
+		}
+
 		if ( Player.IsLocalPlayer )
 		{
 			var json = LocalData.Get<string>( "hotbar" );
@@ -247,6 +259,38 @@ public sealed class PlayerLoadout : Component, Local.IPlayerEvents, Global.IPlay
 		var bestWeapon = Inventory.GetBestWeapon();
 		if ( bestWeapon.IsValid() )
 			Inventory.SwitchWeapon( bestWeapon );
+	}
+
+	private bool ShouldSkipSpawnRestore()
+	{
+		if ( ZombieSurvivalGame.Current is null || !ZombieSurvivalGame.Enabled )
+			return false;
+
+		return Player.IsValid()
+			&& Player.PlayerData.IsValid()
+			&& Player.PlayerData.ZombieSurvivalRole == ZombieSurvivalRole.Zombie;
+	}
+
+	private void ClearWeaponsWithoutSaving()
+	{
+		if ( !Networking.IsHost || !Inventory.IsValid() )
+			return;
+
+		Inventory.SwitchWeapon( null, true );
+
+		foreach ( var weapon in Inventory.Weapons.ToArray() )
+		{
+			if ( !weapon.IsValid() )
+				continue;
+
+			if ( weapon.ViewModel.IsValid() )
+				weapon.ViewModel.Destroy();
+
+			if ( weapon.WorldModel.IsValid() )
+				weapon.WorldModel.Destroy();
+
+			weapon.DestroyGameObject();
+		}
 	}
 
 	void Local.IPlayerEvents.OnDied( PlayerDiedParams args )

@@ -1,0 +1,232 @@
+@using Sandbox
+@using Sandbox.UI
+@using System
+@using System.Linq
+
+@inherits Panel
+@namespace Sandbox
+
+<SpawnMenuContent>
+	<Header>
+		<SpawnMenuToolbar>
+			<Left>
+				<TextEntry Placeholder="Search..." class="filter menu-input" Value:bind=@Filter />
+			</Left>
+
+			<Right>
+				<div class="zs-shop-coins zs-shop-selection">
+					<span>Selected</span>
+					<label>@SelectedFormName</label>
+				</div>
+			</Right>
+		</SpawnMenuToolbar>
+	</Header>
+
+	<Body>
+		@if ( !CanUseShop )
+		{
+			<div class="zs-shop-notice">
+				<div>@BlockedTitle</div>
+				<label>@BlockedText</label>
+			</div>
+		}
+
+		<VirtualGrid Items=@FilteredForms ItemSize=@(140)>
+			<Item Context="item">
+				@if ( item is ZombieSurvivalFormDefinition form )
+				{
+					var selected = IsSelected( form );
+					var canSelect = CanSelect( form );
+
+					<div class="@GetFormIconClass( form, canSelect, selected )" @onclick="@(() => SelectForm( form ))">
+						<SpawnMenuIcon Ident=@GetSpawnMenuIdent( form ) Icon=@GetPreviewIcon( form ) Title=@form.DisplayName />
+
+						<div class="zs-shop-price free">FREE</div>
+
+						@if ( selected )
+						{
+							<div class="zs-shop-status">Selected</div>
+						}
+
+						<div class="zs-shop-meta">@GetMetaText( form )</div>
+						<div class="zs-shop-name">@form.DisplayName</div>
+					</div>
+				}
+			</Item>
+		</VirtualGrid>
+	</Body>
+</SpawnMenuContent>
+
+@code
+{
+	private string _filter = "";
+
+	private string Filter
+	{
+		get => _filter;
+		set
+		{
+			_filter = value ?? "";
+			StateHasChanged();
+		}
+	}
+
+	private PlayerData Data => PlayerData.For( Connection.Local );
+	private ZombieSurvivalGame ZS => ZombieSurvivalGame.Current;
+
+	private ZombieSurvivalFormDefinition[] Forms => ZombieSurvivalFormCatalog.All.ToArray();
+
+	private ZombieSurvivalFormDefinition[] FilteredForms
+	{
+		get
+		{
+			var forms = Forms;
+
+			if ( string.IsNullOrWhiteSpace( Filter ) )
+				return forms;
+
+			return forms
+				.Where( x =>
+					x.DisplayName.Contains( Filter, StringComparison.OrdinalIgnoreCase )
+					|| x.Description.Contains( Filter, StringComparison.OrdinalIgnoreCase )
+				)
+				.ToArray();
+		}
+	}
+
+	private ZombieSurvivalForm SelectedForm
+	{
+		get
+		{
+			if ( Data?.ZombieSurvivalRequestedForm is ZombieSurvivalForm requested && ZombieSurvivalFormCatalog.IsValidForm( requested ) )
+				return requested;
+
+			return ZombieSurvivalForm.Walker;
+		}
+	}
+
+	private string SelectedFormName => ZombieSurvivalFormCatalog.Get( SelectedForm ).DisplayName;
+
+	private string BlockedTitle
+	{
+		get
+		{
+			if ( Data?.ZombieSurvivalRole == ZombieSurvivalRole.Human )
+				return "Humans Cannot Mutate";
+
+			if ( ZS?.Phase == ZombieSurvivalPhase.RoundEnd )
+				return "Round Ended";
+
+			return "Zombie Shop Unavailable";
+		}
+	}
+
+	private string BlockedText
+	{
+		get
+		{
+			if ( Data?.ZombieSurvivalRole == ZombieSurvivalRole.Human )
+				return "The zombie shop is only available to infected players.";
+
+			if ( ZS?.Phase != ZombieSurvivalPhase.Survival )
+				return "Zombie forms can be selected once the infection phase begins.";
+
+			return "You cannot switch zombie forms right now.";
+		}
+	}
+
+	private bool CanUseShop
+	{
+		get
+		{
+			if ( ZS is null || Data is null || !Data.IsValid() )
+				return false;
+
+			return ZS.CanUseZombieShop( Data );
+		}
+	}
+
+	protected override int BuildHash()
+	{
+		var hash = new HashCode();
+
+		hash.Add( ZombieSurvivalGame.Enabled );
+		hash.Add( Filter );
+		hash.Add( Data?.ZombieSurvivalRole );
+		hash.Add( Data?.ZombieSurvivalForm );
+		hash.Add( Data?.ZombieSurvivalRequestedForm );
+		hash.Add( ZS?.Phase );
+
+		foreach ( var form in FilteredForms )
+		{
+			hash.Add( form.Form );
+			hash.Add( form.DisplayName );
+			hash.Add( form.Description );
+			hash.Add( form.Health );
+			hash.Add( form.RunSpeed );
+			hash.Add( form.PreviewPath );
+		}
+
+		return hash.ToHashCode();
+	}
+
+	private bool CanSelect( ZombieSurvivalFormDefinition form )
+	{
+		return form is not null && CanUseShop && ZombieSurvivalFormCatalog.IsValidForm( form.Form );
+	}
+
+	private bool IsSelected( ZombieSurvivalFormDefinition form )
+	{
+		return form is not null && SelectedForm == form.Form;
+	}
+
+	private void SelectForm( ZombieSurvivalFormDefinition form )
+	{
+		if ( !CanSelect( form ) )
+			return;
+
+		ZombieSurvivalGame.RequestSelectZombieForm( form.Form );
+	}
+
+	private string GetFormIconClass( ZombieSurvivalFormDefinition form, bool canSelect, bool selected )
+	{
+		var classes = "zs-shop-icon";
+
+		classes += canSelect ? " can-buy" : " cannot-buy";
+
+		if ( selected )
+			classes += " selected";
+
+		return classes;
+	}
+
+	private static string GetMetaText( ZombieSurvivalFormDefinition form )
+	{
+		if ( form is null )
+			return "";
+
+		return $"{MathF.Round( form.Health )} hp  |  {MathF.Round( form.RunSpeed )} speed";
+	}
+
+	private static string GetSpawnMenuIdent( ZombieSurvivalFormDefinition form )
+	{
+		if ( form is null )
+			return "";
+
+		var path = string.IsNullOrWhiteSpace( form.PreviewPath ) ? form.ModelPath : form.PreviewPath;
+		return $"prop:{path.Replace( "\\", "/" ).Trim()}";
+	}
+
+	private static string GetPreviewIcon( ZombieSurvivalFormDefinition form )
+	{
+		if ( form is null )
+			return "";
+
+		var path = string.IsNullOrWhiteSpace( form.PreviewPath ) ? form.ModelPath : form.PreviewPath;
+
+		if ( string.IsNullOrWhiteSpace( path ) )
+			return "";
+
+		return $"thumb:{path.Replace( "\\", "/" ).Trim()}";
+	}
+}

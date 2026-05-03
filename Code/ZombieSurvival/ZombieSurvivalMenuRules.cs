@@ -1,8 +1,14 @@
 using System;
+using Sandbox;
 
 public static class ZombieSurvivalMenuRules
 {
 	public static bool IsActive => ZombieSurvivalGame.Enabled;
+
+	public static int GetSpawnMenuTabSetVersion()
+	{
+		return HashCode.Combine( IsActive, (int)GetLocalRoleForMenus() );
+	}
 
 	public static bool AllowsSpawnMenuMode( Type type )
 	{
@@ -20,10 +26,28 @@ public static class ZombieSurvivalMenuRules
 		if ( type is null )
 			return false;
 
-		return type.Name is "PropsPage" or "ZombieSurvivalShopPage";
+		return type.Name switch
+		{
+			"PropsPage" => true,
+			"ZombieSurvivalShopPage" => GetLocalRoleForMenus() != ZombieSurvivalRole.Zombie,
+			"ZombieSurvivalZombieShopPage" => GetLocalRoleForMenus() == ZombieSurvivalRole.Zombie,
+			_ => false
+		};
 	}
 
 	public static bool ShowsUtilityTabs => !IsActive;
 
 	public static bool ShowsFullPropCatalog => !IsActive;
+
+	private static ZombieSurvivalRole GetLocalRoleForMenus()
+	{
+		var data = PlayerData.For( Connection.Local );
+
+		if ( !data.IsValid() )
+			return ZombieSurvivalRole.Human;
+
+		return data.ZombieSurvivalRole == ZombieSurvivalRole.Unassigned
+			? ZombieSurvivalRole.Human
+			: data.ZombieSurvivalRole;
+	}
 }

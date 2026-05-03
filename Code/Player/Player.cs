@@ -8,7 +8,19 @@ using System.Threading;
 public sealed partial class Player : Component, Component.IDamageable, PlayerController.IEvents, Global.ISaveEvents, IKillSource
 {
 	private static Player LocalPlayer { get; set; }
-	public static Player FindLocalPlayer() => LocalPlayer;
+	public static Player FindLocalPlayer()
+	{
+		if ( LocalPlayer.IsValid() && LocalPlayer.Network.Owner == Connection.Local )
+			return LocalPlayer;
+
+		if ( Connection.Local is null || Game.ActiveScene is null )
+			return null;
+
+		LocalPlayer = Game.ActiveScene.GetAll<Player>()
+			.FirstOrDefault( x => x.IsValid() && x.Network.Owner == Connection.Local );
+
+		return LocalPlayer;
+	}
 	public static T FindLocalWeapon<T>() where T : BaseCarryable => FindLocalPlayer()?.GetComponentInChildren<T>( true );
 	public static T FindLocalToolMode<T>() where T : ToolMode => FindLocalPlayer()?.GetComponentInChildren<T>( true );
 
@@ -87,6 +99,12 @@ public sealed partial class Player : Component, Component.IDamageable, PlayerCon
 	{
 		if ( LocalPlayer == this )
 			LocalPlayer = null;
+	}
+
+	protected override void OnUpdate()
+	{
+		if ( Network.Owner == Connection.Local )
+			LocalPlayer = this;
 	}
 
 	/// <summary>

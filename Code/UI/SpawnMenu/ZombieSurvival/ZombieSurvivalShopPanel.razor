@@ -38,7 +38,7 @@
 					var canBuy = CanBuy( shopItem );
 
 					<div class="@GetShopIconClass( shopItem, canBuy )" @onclick="@(() => Buy( shopItem ))">
-						<SpawnMenuIcon Ident=@GetSpawnMenuIdent( shopItem ) Title=@shopItem.DisplayName />
+						<SpawnMenuIcon Ident=@GetSpawnMenuIdent( shopItem ) Icon=@GetPreviewIcon( shopItem ) Title=@shopItem.DisplayName />
 
 						<div class="zs-shop-price">@shopItem.Cost</div>
 						<div class="zs-shop-name">@shopItem.DisplayName</div>
@@ -65,8 +65,7 @@
 		}
 	}
 
-	private Player LocalPlayer => Player.FindLocalPlayer();
-	private PlayerData Data => LocalPlayer?.PlayerData;
+	private PlayerData Data => PlayerData.For( Connection.Local );
 	private ZombieSurvivalGame ZS => ZombieSurvivalGame.Current;
 
 	private int Coins => Data?.ZombieSurvivalCoins ?? 0;
@@ -110,6 +109,9 @@
 			if ( Data?.ZombieSurvivalRole == ZombieSurvivalRole.Zombie )
 				return "Zombies Cannot Buy";
 
+			if ( ZS?.Phase == ZombieSurvivalPhase.WaitingForPlayers && !ZombieSurvivalGame.AllowBuyDuringWaiting )
+				return "Buying Disabled";
+
 			if ( ZS?.Phase == ZombieSurvivalPhase.RoundEnd )
 				return "Round Ended";
 
@@ -124,6 +126,9 @@
 			if ( Data?.ZombieSurvivalRole == ZombieSurvivalRole.Zombie )
 				return "The human shop is only available to humans.";
 
+			if ( ZS?.Phase == ZombieSurvivalPhase.WaitingForPlayers && !ZombieSurvivalGame.AllowBuyDuringWaiting )
+				return "Waiting-room buying is disabled by server settings.";
+
 			if ( ZS?.Phase == ZombieSurvivalPhase.Survival && !ZombieSurvivalGame.AllowBuyDuringSurvival )
 				return "Survival buying is disabled by server settings.";
 
@@ -135,31 +140,10 @@
 	{
 		get
 		{
-			if ( !ZombieSurvivalGame.Enabled )
+			if ( ZS is null || Data is null || !Data.IsValid() )
 				return false;
 
-			if ( LocalPlayer is null || !LocalPlayer.IsValid() )
-				return false;
-
-			if ( Data is null || !Data.IsValid() )
-				return false;
-
-			if ( Data.ZombieSurvivalRole != ZombieSurvivalRole.Human )
-				return false;
-
-			if ( ZS is null )
-				return false;
-
-			if ( ZS.Phase == ZombieSurvivalPhase.WaitingForPlayers )
-				return true;
-
-			if ( ZS.Phase == ZombieSurvivalPhase.Build )
-				return true;
-
-			if ( ZS.Phase == ZombieSurvivalPhase.Survival && ZombieSurvivalGame.AllowBuyDuringSurvival )
-				return true;
-
-			return false;
+			return ZS.CanUseHumanShop( Data );
 		}
 	}
 
@@ -173,6 +157,7 @@
 		hash.Add( Coins );
 		hash.Add( Data?.ZombieSurvivalRole );
 		hash.Add( ZS?.Phase );
+		hash.Add( ZombieSurvivalGame.AllowBuyDuringWaiting );
 		hash.Add( ZombieSurvivalGame.AllowBuyDuringSurvival );
 
 		foreach ( var item in FilteredItems )
@@ -244,6 +229,25 @@
 
 		path = path.Replace( "\\", "/" ).Trim();
 
-		return $"prop:{path}";
+		if ( path.EndsWith( ".vmdl", StringComparison.OrdinalIgnoreCase ) || path.EndsWith( ".vmdl_c", StringComparison.OrdinalIgnoreCase ) )
+			return $"prop:{path}";
+
+		return "";
+	}
+
+	private static string GetPreviewIcon( ZombieSurvivalShopItem item )
+	{
+		if ( item is null )
+			return "";
+
+		var path = item.PreviewPath;
+
+		if ( string.IsNullOrWhiteSpace( path ) )
+			path = item.ResourcePath;
+
+		if ( string.IsNullOrWhiteSpace( path ) )
+			return "";
+
+		return $"thumb:{path.Replace( "\\", "/" ).Trim()}";
 	}
 }

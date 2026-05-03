@@ -74,6 +74,7 @@
 
     List<Panel> tabs = new List<Panel>();
     List<Panel> utilityTabs = new List<Panel>();
+    int lastTabSetVersion = int.MinValue;
 
     public void BuildTabs()
     {
@@ -126,12 +127,39 @@
         if (firstTime && TabContainer.IsValid())
         {
             BuildTabs();
+            lastTabSetVersion = ZombieSurvivalMenuRules.GetSpawnMenuTabSetVersion();
         }
 
         if (firstTime && UtilityContainer.IsValid())
         {
             BuildUtilityTabs();
         }
+    }
+
+    public override void Tick()
+    {
+        base.Tick();
+
+        var currentTabSetVersion = ZombieSurvivalMenuRules.GetSpawnMenuTabSetVersion();
+
+        if ( TabContainer.IsValid() && lastTabSetVersion != int.MinValue && currentTabSetVersion != lastTabSetVersion )
+        {
+            lastTabSetVersion = currentTabSetVersion;
+            RebuildTabs();
+        }
+    }
+
+    void RebuildTabs()
+    {
+        activeTab = null;
+
+        foreach ( var tab in tabs.ToArray() )
+        {
+            tab.Delete();
+        }
+
+        tabs.Clear();
+        BuildTabs();
     }
 
     void SwitchTab(Panel tab)

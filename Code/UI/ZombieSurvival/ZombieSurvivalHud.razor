@@ -6,10 +6,10 @@
 
 @{
 	var player = Player.FindLocalPlayer();
-	var data = player?.PlayerData;
+	var data = PlayerData.For( Connection.Local );
 	var game = ZombieSurvivalGame.Current;
 
-	if ( !ZombieSurvivalGame.Enabled || game is null || !player.IsValid() || player.WantsHideHud || !data.IsValid() )
+	if ( !ZombieSurvivalGame.Enabled || game is null || !data.IsValid() || player?.WantsHideHud == true )
 		return;
 }
 
@@ -46,7 +46,7 @@
 @code
 {
 	Player Player => Player.FindLocalPlayer();
-	PlayerData Data => Player?.PlayerData;
+	PlayerData Data => PlayerData.For( Connection.Local );
 	ZombieSurvivalGame ZS => ZombieSurvivalGame.Current;
 
 	string PhaseText => ZS?.Phase switch
