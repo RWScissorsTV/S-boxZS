@@ -137,12 +137,12 @@ public static class ZombieSurvivalFormCatalog
 		MeleeRadius = 18f,
 		MeleeCooldown = 0.8f,
 
-		BodyHeight = 16f,
+		BodyHeight = 18f,
 		BodyRadius = 10f,
 		DuckedHeight = 12f,
-		EyeDistanceFromTop = 8f,
-		CameraOffset = new Vector3( 96f, 0f, -32f ),
-		ReachLength = 70f,
+		EyeDistanceFromTop = 5f,
+		CameraOffset = new Vector3( 96f, 0f, -24f ),
+		ReachLength = 65f,
 
 		MoveSpeedForFullBlend = 250f,
 		MinimumPlaybackRate = 0.80f,
