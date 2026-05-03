@@ -1,5 +1,6 @@
-@using Sandbox;
-@using Sandbox.UI;
+@using Sandbox
+@using Sandbox.UI
+
 @inherits PanelComponent
 @namespace Sandbox
 
@@ -12,29 +13,40 @@
 		return;
 }
 
-<root>
-	<div class="zs-hud hud-panel">
-		<div class="primary">
-			<label class="phase">@PhaseText</label>
-			<label class="timer">@TimerText</label>
-		</div>
-		<div class="secondary">
-			<label class="role @RoleClass">@RoleText</label>
-			<label class="objective">@ObjectiveText</label>
-		</div>
-		<div class="counts">
-			<label>@game.HumanCount humans</label>
-			<label>@game.ZombieCount zombies</label>
-		</div>
-		@if ( game.Phase == ZombieSurvivalPhase.Build )
-		{
-			<div class="budget">
-				<label>@data.ZombieSurvivalBuildPoints build points</label>
-				<label>@ZombieSurvivalGame.GetPropSpawnCost() per prop</label>
-			</div>
-		}
+<div class="zs-hud">
+	<div class="zs-hud__top">
+		<div class="zs-hud__phase">@PhaseText</div>
+		<div class="zs-hud__timer">@TimerText</div>
 	</div>
-</root>
+
+	<div class="zs-hud__role @RoleClass">
+		@RoleText
+	</div>
+
+	<div class="zs-hud__objective">
+		@ObjectiveText
+	</div>
+
+	<div class="zs-hud__counts">
+		<span>@game.HumanCount humans</span>
+		<span>@game.ZombieCount zombies</span>
+	</div>
+
+	@if ( data.ZombieSurvivalRole == ZombieSurvivalRole.Human )
+	{
+		<div class="zs-hud__coins">
+			@data.ZombieSurvivalCoins coins
+		</div>
+	}
+
+	@if ( game.Phase == ZombieSurvivalPhase.Build && data.ZombieSurvivalRole == ZombieSurvivalRole.Human )
+	{
+		<div class="zs-hud__build">
+			<div>@data.ZombieSurvivalBuildPoints build points</div>
+			<div>@ZombieSurvivalGame.GetPropSpawnCost() per prop</div>
+		</div>
+	}
+</div>
 
 @code
 {
@@ -96,27 +108,38 @@
 		SetClass( "survival", ZS?.Phase == ZombieSurvivalPhase.Survival );
 		SetClass( "round-end", ZS?.Phase == ZombieSurvivalPhase.RoundEnd );
 		SetClass( "waiting", ZS?.Phase == ZombieSurvivalPhase.WaitingForPlayers );
+
+		SetClass( "human", Data?.ZombieSurvivalRole == ZombieSurvivalRole.Human );
+		SetClass( "zombie", Data?.ZombieSurvivalRole == ZombieSurvivalRole.Zombie );
 	}
 
 	protected override int BuildHash()
 	{
 		var hash = new HashCode();
+
 		hash.Add( ZombieSurvivalGame.Enabled );
 		hash.Add( ZS?.Phase );
 		hash.Add( (int)MathF.Ceiling( ZS?.RemainingTime ?? 0f ) );
 		hash.Add( ZS?.HumansWonLastRound );
 		hash.Add( ZS?.HumanCount );
 		hash.Add( ZS?.ZombieCount );
+
 		hash.Add( Data?.ZombieSurvivalRole );
+		hash.Add( Data?.ZombieSurvivalForm );
+		hash.Add( Data?.ZombieSurvivalRequestedForm );
 		hash.Add( Data?.ZombieSurvivalBuildPoints );
+		hash.Add( Data?.ZombieSurvivalCoins );
+
 		hash.Add( ZombieSurvivalGame.GetPropSpawnCost() );
 		hash.Add( Player?.WantsHideHud );
+
 		return hash.ToHashCode();
 	}
 
 	private static string FormatTime( float seconds )
 	{
 		seconds = MathF.Max( seconds, 0f );
+
 		var totalSeconds = (int)MathF.Ceiling( seconds );
 		return $"{totalSeconds / 60:00}:{totalSeconds % 60:00}";
 	}

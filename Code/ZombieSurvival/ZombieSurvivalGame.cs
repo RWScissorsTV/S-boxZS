@@ -2,9 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Sandbox;
 using Sandbox.UI;
 
-public sealed class ZombieSurvivalGame : GameObjectSystem<ZombieSurvivalGame>, Global.IPlayerEvents, Global.ISpawnEvents, IToolActionEvents
+public sealed class ZombieSurvivalGame : GameObjectSystem, Global.IPlayerEvents, Global.ISpawnEvents, IToolActionEvents
 {
 	[ConVar( "zs.enabled", ConVarFlags.Replicated | ConVarFlags.Server | ConVarFlags.GameSetting )]
 	public static bool Enabled { get; set; } = true;
@@ -66,6 +67,12 @@ public sealed class ZombieSurvivalGame : GameObjectSystem<ZombieSurvivalGame>, G
 	[ConVar( "zs.prop_spawn_cost", ConVarFlags.Replicated | ConVarFlags.Server | ConVarFlags.GameSetting )]
 	public static int PropSpawnCost { get; set; } = 10;
 
+	[ConVar( "zs.starting_coins", ConVarFlags.Replicated | ConVarFlags.Server | ConVarFlags.GameSetting )]
+	public static int StartingCoins { get; set; } = 100;
+
+	[ConVar( "zs.allow_buy_during_survival", ConVarFlags.Replicated | ConVarFlags.Server | ConVarFlags.GameSetting )]
+	public static bool AllowBuyDuringSurvival { get; set; } = true;
+
 	[ConVar( "zs.allow_toolgun_actions", ConVarFlags.Replicated | ConVarFlags.Server | ConVarFlags.GameSetting )]
 	public static bool AllowToolgunActions { get; set; } = false;
 
@@ -97,12 +104,15 @@ public sealed class ZombieSurvivalGame : GameObjectSystem<ZombieSurvivalGame>, G
 		{
 			case ZombieSurvivalPhase.WaitingForPlayers:
 				RemainingTime = 0f;
+
 				if ( ConnectedPlayers.Count() >= MinimumPlayersToStart )
 					BeginBuildPhase();
+
 				break;
 
 			case ZombieSurvivalPhase.Build:
 				RemainingTime = MathF.Max( _phaseTimer, 0f );
+
 				if ( ConnectedPlayers.Count() < MinimumPlayersToStart )
 				{
 					BeginWaitingForPlayers();
@@ -111,10 +121,12 @@ public sealed class ZombieSurvivalGame : GameObjectSystem<ZombieSurvivalGame>, G
 
 				if ( _phaseTimer <= 0f )
 					BeginSurvivalPhase();
+
 				break;
 
 			case ZombieSurvivalPhase.Survival:
 				RemainingTime = MathF.Max( _phaseTimer, 0f );
+
 				if ( ConnectedPlayers.Count() < MinimumPlayersToStart )
 				{
 					BeginWaitingForPlayers();
@@ -129,10 +141,12 @@ public sealed class ZombieSurvivalGame : GameObjectSystem<ZombieSurvivalGame>, G
 
 				if ( _phaseTimer <= 0f )
 					EndRound( humansWon: true );
+
 				break;
 
 			case ZombieSurvivalPhase.RoundEnd:
 				RemainingTime = MathF.Max( _phaseTimer, 0f );
+
 				if ( _phaseTimer <= 0f )
 				{
 					if ( ConnectedPlayers.Count() >= MinimumPlayersToStart )
@@ -140,22 +154,29 @@ public sealed class ZombieSurvivalGame : GameObjectSystem<ZombieSurvivalGame>, G
 					else
 						BeginWaitingForPlayers();
 				}
+
 				break;
 		}
 
 		BroadcastState();
 	}
 
-	private IEnumerable<PlayerData> ConnectedPlayers => PlayerData.All.Where( x => x.IsValid() && x.Connection is not null );
+	private IEnumerable<PlayerData> ConnectedPlayers =>
+		PlayerData.All.Where( x => x.IsValid() && x.Connection is not null );
 
 	private void EnsureConnectedPlayerState()
 	{
 		foreach ( var data in ConnectedPlayers )
 		{
+			if ( data.ZombieSurvivalRequestedForm == ZombieSurvivalForm.None )
+				data.ZombieSurvivalRequestedForm = GetDefaultZombieForm();
+
 			if ( Phase == ZombieSurvivalPhase.WaitingForPlayers && data.ZombieSurvivalRole == ZombieSurvivalRole.Unassigned )
 			{
 				data.ZombieSurvivalRole = ZombieSurvivalRole.Human;
+				data.ZombieSurvivalForm = ZombieSurvivalForm.None;
 				data.ZombieSurvivalAlive = true;
+				data.ZombieSurvivalBuildPoints = 0;
 			}
 		}
 	}
@@ -174,9 +195,13 @@ public sealed class ZombieSurvivalGame : GameObjectSystem<ZombieSurvivalGame>, G
 			data.ZombieSurvivalForm = ZombieSurvivalForm.None;
 			data.ZombieSurvivalAlive = true;
 			data.ZombieSurvivalBuildPoints = 0;
+
+			if ( data.ZombieSurvivalRequestedForm == ZombieSurvivalForm.None )
+				data.ZombieSurvivalRequestedForm = GetDefaultZombieForm();
 		}
 
 		ApplyRolesToSpawnedPlayers();
+
 		PostSystemText( "Waiting for players." );
 		BroadcastState( force: true );
 	}
@@ -195,11 +220,17 @@ public sealed class ZombieSurvivalGame : GameObjectSystem<ZombieSurvivalGame>, G
 			data.ZombieSurvivalRole = ZombieSurvivalRole.Human;
 			data.ZombieSurvivalForm = ZombieSurvivalForm.None;
 			data.ZombieSurvivalAlive = true;
+
+			if ( data.ZombieSurvivalRequestedForm == ZombieSurvivalForm.None )
+				data.ZombieSurvivalRequestedForm = GetDefaultZombieForm();
+
+			data.ZombieSurvivalResetEconomyHost( StartingCoins );
 			GrantBuildPoints( data );
 		}
 
 		ApplyRolesToSpawnedPlayers();
-		PostSystemText( "Build phase started. Prepare your barricades." );
+
+		PostSystemText( "Build phase started.\nPrepare your barricades." );
 		BroadcastState( force: true );
 	}
 
@@ -210,23 +241,29 @@ public sealed class ZombieSurvivalGame : GameObjectSystem<ZombieSurvivalGame>, G
 		RemainingTime = SurvivalSeconds;
 
 		var players = ConnectedPlayers.ToList();
+
 		foreach ( var data in players )
 		{
 			data.ZombieSurvivalRole = ZombieSurvivalRole.Human;
 			data.ZombieSurvivalForm = ZombieSurvivalForm.None;
 			data.ZombieSurvivalAlive = true;
 			data.ZombieSurvivalBuildPoints = 0;
+
+			if ( data.ZombieSurvivalRequestedForm == ZombieSurvivalForm.None )
+				data.ZombieSurvivalRequestedForm = GetDefaultZombieForm();
 		}
 
 		var zombieCount = GetInitialZombieCount( players.Count );
+
 		foreach ( var zombie in players.OrderBy( _ => Guid.NewGuid() ).Take( zombieCount ) )
 		{
 			zombie.ZombieSurvivalRole = ZombieSurvivalRole.Zombie;
-			zombie.ZombieSurvivalForm = GetDefaultZombieForm();
+			zombie.ZombieSurvivalForm = GetPreferredZombieForm( zombie );
 		}
 
 		ApplyRolesToSpawnedPlayers();
-		PostSystemText( $"Survival phase started. {zombieCount} player(s) infected." );
+
+		PostSystemText( $"Survival phase started.\n{zombieCount} player(s) infected." );
 		BroadcastState( force: true );
 	}
 
@@ -248,12 +285,18 @@ public sealed class ZombieSurvivalGame : GameObjectSystem<ZombieSurvivalGame>, G
 
 		var zombieCount = (int)Math.Ceiling( playerCount * Math.Clamp( InitialZombieFraction, 0f, 1f ) );
 		zombieCount = Math.Max( zombieCount, Math.Max( MinimumInitialZombies, 1 ) );
+
 		return Math.Clamp( zombieCount, 1, playerCount );
 	}
 
 	private int CountHumans()
 	{
 		return ConnectedPlayers.Count( x => x.ZombieSurvivalRole == ZombieSurvivalRole.Human && x.ZombieSurvivalAlive );
+	}
+
+	private int CountZombies()
+	{
+		return ConnectedPlayers.Count( x => x.ZombieSurvivalRole == ZombieSurvivalRole.Zombie );
 	}
 
 	private void ApplyRolesToSpawnedPlayers()
@@ -271,8 +314,9 @@ public sealed class ZombieSurvivalGame : GameObjectSystem<ZombieSurvivalGame>, G
 
 		var data = player.PlayerData;
 		var isZombie = data.ZombieSurvivalRole == ZombieSurvivalRole.Zombie;
+
 		if ( isZombie && data.ZombieSurvivalForm == ZombieSurvivalForm.None )
-			data.ZombieSurvivalForm = GetDefaultZombieForm();
+			data.ZombieSurvivalForm = GetPreferredZombieForm( data );
 		else if ( !isZombie )
 			data.ZombieSurvivalForm = ZombieSurvivalForm.None;
 
@@ -282,33 +326,44 @@ public sealed class ZombieSurvivalGame : GameObjectSystem<ZombieSurvivalGame>, G
 		player.GameObject.Tags.Remove( "zombie" );
 		player.GameObject.Tags.Add( isZombie ? "zombie" : "human" );
 
-		player.MaxHealth = isZombie
-			? data.ZombieSurvivalForm == ZombieSurvivalForm.Headcrab ? zombieForm.Health : ZombieHealth
-			: HumanHealth;
+		if ( isZombie )
+		{
+			player.MaxHealth = data.ZombieSurvivalForm == ZombieSurvivalForm.Headcrab ? zombieForm.Health : ZombieHealth;
+		}
+		else
+		{
+			player.MaxHealth = HumanHealth;
+		}
+
 		player.Health = player.MaxHealth;
 		player.Armour = 0f;
+
 		data.ZombieSurvivalAlive = true;
 
 		if ( player.Controller.IsValid() )
 		{
-			player.Controller.WalkSpeed = isZombie
-				? data.ZombieSurvivalForm == ZombieSurvivalForm.Headcrab ? zombieForm.WalkSpeed : ZombieWalkSpeed
-				: HumanWalkSpeed;
-			player.Controller.RunSpeed = isZombie
-				? data.ZombieSurvivalForm == ZombieSurvivalForm.Headcrab ? zombieForm.RunSpeed : ZombieRunSpeed
-				: HumanRunSpeed;
-
 			if ( isZombie )
+			{
+				player.Controller.WalkSpeed = data.ZombieSurvivalForm == ZombieSurvivalForm.Headcrab ? zombieForm.WalkSpeed : ZombieWalkSpeed;
+				player.Controller.RunSpeed = data.ZombieSurvivalForm == ZombieSurvivalForm.Headcrab ? zombieForm.RunSpeed : ZombieRunSpeed;
 				player.Controller.ThirdPerson = true;
+			}
+			else
+			{
+				player.Controller.WalkSpeed = HumanWalkSpeed;
+				player.Controller.RunSpeed = HumanRunSpeed;
+			}
 		}
 
 		var attack = player.GameObject.GetOrAddComponent<ZombieSurvivalZombieAttack>();
 		attack.Enabled = isZombie;
+
 		if ( isZombie )
 			attack.ConfigureForForm( data.ZombieSurvivalForm );
 
 		var formPresenter = player.GameObject.GetOrAddComponent<ZombieSurvivalZombieFormPresenter>();
 		formPresenter.Enabled = isZombie;
+
 		if ( isZombie )
 			formPresenter.ApplyNow();
 
@@ -353,12 +408,8 @@ public sealed class ZombieSurvivalGame : GameObjectSystem<ZombieSurvivalGame>, G
 		ZombieCount = CountZombies();
 
 		RpcSetState( Phase, RemainingTime, HumansWonLastRound, HumanCount, ZombieCount );
-		_stateBroadcastCooldown = 0.25f;
-	}
 
-	private int CountZombies()
-	{
-		return ConnectedPlayers.Count( x => x.ZombieSurvivalRole == ZombieSurvivalRole.Zombie );
+		_stateBroadcastCooldown = 0.25f;
 	}
 
 	[Rpc.Broadcast( NetFlags.HostOnly )]
@@ -376,7 +427,7 @@ public sealed class ZombieSurvivalGame : GameObjectSystem<ZombieSurvivalGame>, G
 
 	private void PostSystemText( string message )
 	{
-		Scene.Get<Chat>()?.AddSystemText( message, "info" );
+		Scene.GetSystem<Chat>()?.AddSystemText( message, "info" );
 	}
 
 	private static void GrantBuildPoints( PlayerData data )
@@ -407,15 +458,26 @@ public sealed class ZombieSurvivalGame : GameObjectSystem<ZombieSurvivalGame>, G
 		if ( Networking.IsActive && !Networking.IsHost )
 			return;
 
-		var joiningThisRound = player.IsValid()
+		var joiningThisRound =
+			player.IsValid()
 			&& player.PlayerData.IsValid()
 			&& player.PlayerData.ZombieSurvivalRole == ZombieSurvivalRole.Unassigned;
 
 		if ( joiningThisRound )
+		{
 			player.PlayerData.ZombieSurvivalRole = ZombieSurvivalRole.Human;
+			player.PlayerData.ZombieSurvivalForm = ZombieSurvivalForm.None;
+			player.PlayerData.ZombieSurvivalAlive = true;
+
+			if ( player.PlayerData.ZombieSurvivalRequestedForm == ZombieSurvivalForm.None )
+				player.PlayerData.ZombieSurvivalRequestedForm = GetDefaultZombieForm();
+		}
 
 		if ( joiningThisRound && Phase == ZombieSurvivalPhase.Build )
+		{
+			player.PlayerData.ZombieSurvivalResetEconomyHost( StartingCoins );
 			GrantBuildPoints( player.PlayerData );
+		}
 
 		ApplyRoleToPlayer( player );
 	}
@@ -437,7 +499,8 @@ public sealed class ZombieSurvivalGame : GameObjectSystem<ZombieSurvivalGame>, G
 		if ( Phase == ZombieSurvivalPhase.Survival && data.ZombieSurvivalRole == ZombieSurvivalRole.Human )
 		{
 			data.ZombieSurvivalRole = ZombieSurvivalRole.Zombie;
-			data.ZombieSurvivalForm = GetDefaultZombieForm();
+			data.ZombieSurvivalForm = GetPreferredZombieForm( data );
+
 			PostSystemText( $"{data.DisplayName} has joined the zombies." );
 		}
 	}
@@ -451,6 +514,7 @@ public sealed class ZombieSurvivalGame : GameObjectSystem<ZombieSurvivalGame>, G
 			return;
 
 		var attacker = e.DamageInfo.Attacker?.GetComponentInParent<Player>( true );
+
 		if ( !attacker.IsValid() || !attacker.PlayerData.IsValid() || !e.Player.PlayerData.IsValid() )
 			return;
 
@@ -515,10 +579,11 @@ public sealed class ZombieSurvivalGame : GameObjectSystem<ZombieSurvivalGame>, G
 		}
 
 		var cost = GetPropSpawnCost();
+
 		if ( cost > 0 && e.Player.ZombieSurvivalBuildPoints < cost )
 		{
 			e.Cancelled = true;
-			SendBuildNotice( e.Player, $"Need {cost} build points. {e.Player.ZombieSurvivalBuildPoints} left." );
+			SendBuildNotice( e.Player, $"Need {cost} build points.\n{e.Player.ZombieSurvivalBuildPoints} left." );
 			return;
 		}
 
@@ -552,13 +617,199 @@ public sealed class ZombieSurvivalGame : GameObjectSystem<ZombieSurvivalGame>, G
 		}
 	}
 
+	[Rpc.Host]
+	public static void RequestBuyItem( string itemId )
+	{
+		if ( Current is not ZombieSurvivalGame game )
+			return;
+
+		game.BuyItemHost( Rpc.Caller, itemId );
+	}
+
+	private void BuyItemHost( Connection caller, string itemId )
+	{
+		if ( !Enabled )
+			return;
+
+		if ( !Networking.IsHost )
+			return;
+
+		if ( caller is null )
+			return;
+
+		var data = PlayerData.For( caller );
+
+		if ( !data.IsValid() )
+			return;
+
+		if ( Phase != ZombieSurvivalPhase.Build && !(Phase == ZombieSurvivalPhase.Survival && AllowBuyDuringSurvival) )
+		{
+			SendShopNotice( caller, "You cannot buy right now." );
+			return;
+		}
+
+		if ( data.ZombieSurvivalRole != ZombieSurvivalRole.Human )
+		{
+			SendShopNotice( caller, "Zombies cannot buy from the human shop." );
+			return;
+		}
+
+		var item = ZombieSurvivalShopCatalog.Find( itemId );
+
+		if ( item is null )
+		{
+			SendShopNotice( caller, "Unknown shop item." );
+			return;
+		}
+
+		if ( item.Type != ZombieSurvivalShopItemType.Weapon )
+		{
+			SendShopNotice( caller, $"{item.DisplayName} is listed, but that item type is not wired yet." );
+			return;
+		}
+
+		if ( !data.ZombieSurvivalSpendCoinsHost( item.Cost ) )
+		{
+			SendShopNotice( caller, $"Need {item.Cost} coins." );
+			return;
+		}
+
+		if ( !GiveShopItemHost( data, item ) )
+		{
+			data.ZombieSurvivalAddCoinsHost( item.Cost );
+			SendShopNotice( caller, $"Could not give {item.DisplayName}. Coins refunded." );
+			return;
+		}
+
+		SendShopNotice( caller, $"Bought {item.DisplayName} for {item.Cost} coins.", Color.Green );
+	}
+
+	private bool GiveShopItemHost( PlayerData data, ZombieSurvivalShopItem item )
+	{
+		if ( !Networking.IsHost )
+			return false;
+
+		if ( !data.IsValid() )
+			return false;
+
+		var player = FindPlayerForData( data );
+
+		if ( !player.IsValid() )
+			return false;
+
+		if ( player.PlayerData.ZombieSurvivalRole != ZombieSurvivalRole.Human )
+			return false;
+
+		var inventory = player.GetComponent<PlayerInventory>();
+
+		if ( !inventory.IsValid() )
+			return false;
+
+		inventory.Enabled = true;
+
+		var prefabPath = ResolveShopPrefabPath( item );
+
+		if ( string.IsNullOrWhiteSpace( prefabPath ) )
+			return false;
+
+		return inventory.Pickup( prefabPath, true );
+	}
+
+	private Player FindPlayerForData( PlayerData data )
+	{
+		if ( !data.IsValid() )
+			return null;
+
+		return Scene.GetAll<Player>()
+			.FirstOrDefault( x => x.IsValid() && x.PlayerData == data );
+	}
+
+	private static string ResolveShopPrefabPath( ZombieSurvivalShopItem item )
+	{
+		if ( item is null )
+			return "";
+
+		foreach ( var candidate in GetShopPrefabPathCandidates( item ) )
+		{
+			var prefab = GameObject.GetPrefab( candidate );
+
+			if ( prefab is not null )
+				return candidate;
+		}
+
+		return "";
+	}
+
+	private static IEnumerable<string> GetShopPrefabPathCandidates( ZombieSurvivalShopItem item )
+	{
+		if ( item is null )
+			yield break;
+
+		if ( !string.IsNullOrWhiteSpace( item.ResourcePath ) )
+		{
+			var path = item.ResourcePath.Replace( "\\", "/" ).Trim();
+
+			yield return path;
+
+			if ( !path.EndsWith( ".prefab", StringComparison.OrdinalIgnoreCase ) )
+				yield return $"{path}.prefab";
+
+			var lastSlash = path.LastIndexOf( '/' );
+
+			if ( lastSlash >= 0 )
+			{
+				var folder = path[..lastSlash];
+				var name = path[(lastSlash + 1)..];
+
+				if ( !string.IsNullOrWhiteSpace( folder ) && !string.IsNullOrWhiteSpace( name ) )
+					yield return $"{folder}/{name.ToLowerInvariant()}.prefab";
+			}
+		}
+
+		var id = item.Id?.Trim();
+
+		if ( string.IsNullOrWhiteSpace( id ) )
+			yield break;
+
+		var normalizedId = id.ToLowerInvariant();
+
+		yield return $"weapons/{id}/{normalizedId}.prefab";
+		yield return $"weapons/{ToPascalPathSegment( id )}/{normalizedId}.prefab";
+	}
+
+	private static string ToPascalPathSegment( string value )
+	{
+		if ( string.IsNullOrWhiteSpace( value ) )
+			return "";
+
+		var pieces = value
+			.Split( new[] { '_', '-', ' ' }, StringSplitOptions.RemoveEmptyEntries )
+			.Select( x => x.Length <= 1 ? x.ToUpperInvariant() : char.ToUpperInvariant( x[0] ) + x[1..] );
+
+		return string.Join( "", pieces );
+	}
+
 	private static void SendBuildNotice( PlayerData player, string text )
 	{
 		var target = player?.Connection;
+
 		if ( target is null )
 			return;
 
 		Notices.SendNotice( target, "block", Color.Red, text, 3 );
+	}
+
+	private static void SendShopNotice( Connection target, string text )
+	{
+		SendShopNotice( target, text, Color.Red );
+	}
+
+	private static void SendShopNotice( Connection target, string text, Color color )
+	{
+		if ( target is null )
+			return;
+
+		Notices.SendNotice( target, "shopping_cart", color, text, 3 );
 	}
 
 	public static int GetPropSpawnCost()
@@ -569,6 +820,17 @@ public sealed class ZombieSurvivalGame : GameObjectSystem<ZombieSurvivalGame>, G
 	private static ZombieSurvivalForm GetDefaultZombieForm()
 	{
 		return ZombieSurvivalFormCatalog.FromConVarValue( DefaultZombieForm );
+	}
+
+	private static ZombieSurvivalForm GetPreferredZombieForm( PlayerData data )
+	{
+		if ( !data.IsValid() )
+			return GetDefaultZombieForm();
+
+		if ( data.ZombieSurvivalRequestedForm == ZombieSurvivalForm.None )
+			return GetDefaultZombieForm();
+
+		return data.ZombieSurvivalRequestedForm;
 	}
 
 	void IToolActionEvents.OnToolAction( IToolActionEvents.ActionData e )
