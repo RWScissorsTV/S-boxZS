@@ -6,7 +6,6 @@ using Sandbox;
 using Sandbox.UI;
 
 public sealed class ZombieSurvivalGame : GameObjectSystem, Global.IPlayerEvents, Global.ISpawnEvents, IToolActionEvents
-
 {
 	public static ZombieSurvivalGame Current { get; private set; }
 
@@ -73,6 +72,9 @@ public sealed class ZombieSurvivalGame : GameObjectSystem, Global.IPlayerEvents,
 	[ConVar( "zs.starting_coins", ConVarFlags.Replicated | ConVarFlags.Server | ConVarFlags.GameSetting )]
 	public static int StartingCoins { get; set; } = 100;
 
+	[ConVar( "zs.allow_buy_during_waiting", ConVarFlags.Replicated | ConVarFlags.Server | ConVarFlags.GameSetting )]
+	public static bool AllowBuyDuringWaiting { get; set; } = true;
+
 	[ConVar( "zs.allow_buy_during_survival", ConVarFlags.Replicated | ConVarFlags.Server | ConVarFlags.GameSetting )]
 	public static bool AllowBuyDuringSurvival { get; set; } = true;
 
@@ -87,6 +89,12 @@ public sealed class ZombieSurvivalGame : GameObjectSystem, Global.IPlayerEvents,
 
 	private TimeUntil _phaseTimer;
 	private TimeUntil _stateBroadcastCooldown;
+
+	/// <summary>
+	/// Prevents coins from being reset every tick while waiting.
+	/// Also prevents waiting-phase purchases from becoming free when the build phase starts.
+	/// </summary>
+	private readonly HashSet<Connection> _economyInitializedConnections = new();
 
 	public ZombieSurvivalGame( Scene scene ) : base( scene )
 	{
@@ -175,15 +183,34 @@ public sealed class ZombieSurvivalGame : GameObjectSystem, Global.IPlayerEvents,
 			if ( data.ZombieSurvivalRequestedForm == ZombieSurvivalForm.None )
 				data.ZombieSurvivalRequestedForm = GetDefaultZombieForm();
 
-			if ( Phase == ZombieSurvivalPhase.WaitingForPlayers && data.ZombieSurvivalRole == ZombieSurvivalRole.Unassigned )
+			if ( Phase != ZombieSurvivalPhase.WaitingForPlayers )
+				continue;
+
+			if ( data.ZombieSurvivalRole == ZombieSurvivalRole.Unassigned )
 			{
 				data.ZombieSurvivalRole = ZombieSurvivalRole.Human;
 				data.ZombieSurvivalForm = ZombieSurvivalForm.None;
 				data.ZombieSurvivalAlive = true;
 				data.ZombieSurvivalBuildPoints = 0;
-				data.ZombieSurvivalResetEconomyHost( StartingCoins );
 			}
+
+			InitializeEconomyIfNeeded( data );
 		}
+	}
+
+	private void InitializeEconomyIfNeeded( PlayerData data )
+	{
+		if ( !Networking.IsHost )
+			return;
+
+		if ( !data.IsValid() || data.Connection is null )
+			return;
+
+		if ( _economyInitializedConnections.Contains( data.Connection ) )
+			return;
+
+		data.ZombieSurvivalResetEconomyHost( StartingCoins );
+		_economyInitializedConnections.Add( data.Connection );
 	}
 
 	private void BeginWaitingForPlayers()
@@ -194,6 +221,8 @@ public sealed class ZombieSurvivalGame : GameObjectSystem, Global.IPlayerEvents,
 		RemainingTime = 0f;
 		HumansWonLastRound = false;
 
+		_economyInitializedConnections.Clear();
+
 		foreach ( var data in ConnectedPlayers )
 		{
 			data.ZombieSurvivalRole = ZombieSurvivalRole.Human;
@@ -203,6 +232,8 @@ public sealed class ZombieSurvivalGame : GameObjectSystem, Global.IPlayerEvents,
 
 			if ( data.ZombieSurvivalRequestedForm == ZombieSurvivalForm.None )
 				data.ZombieSurvivalRequestedForm = GetDefaultZombieForm();
+
+			InitializeEconomyIfNeeded( data );
 		}
 
 		ApplyRolesToSpawnedPlayers();
@@ -215,10 +246,15 @@ public sealed class ZombieSurvivalGame : GameObjectSystem, Global.IPlayerEvents,
 	{
 		CleanupRoundBarricades();
 
+		var resetEconomyForNewRound = Phase == ZombieSurvivalPhase.RoundEnd;
+
 		Phase = ZombieSurvivalPhase.Build;
 		_phaseTimer = MathF.Max( BuildSeconds, 1f );
 		RemainingTime = BuildSeconds;
 		HumansWonLastRound = false;
+
+		if ( resetEconomyForNewRound )
+			_economyInitializedConnections.Clear();
 
 		foreach ( var data in ConnectedPlayers )
 		{
@@ -229,7 +265,7 @@ public sealed class ZombieSurvivalGame : GameObjectSystem, Global.IPlayerEvents,
 			if ( data.ZombieSurvivalRequestedForm == ZombieSurvivalForm.None )
 				data.ZombieSurvivalRequestedForm = GetDefaultZombieForm();
 
-			data.ZombieSurvivalResetEconomyHost( StartingCoins );
+			InitializeEconomyIfNeeded( data );
 			GrantBuildPoints( data );
 		}
 
@@ -478,10 +514,13 @@ public sealed class ZombieSurvivalGame : GameObjectSystem, Global.IPlayerEvents,
 				player.PlayerData.ZombieSurvivalRequestedForm = GetDefaultZombieForm();
 		}
 
-		if ( joiningThisRound && Phase == ZombieSurvivalPhase.Build )
+		if ( player.IsValid() && player.PlayerData.IsValid() )
 		{
-			player.PlayerData.ZombieSurvivalResetEconomyHost( StartingCoins );
-			GrantBuildPoints( player.PlayerData );
+			if ( Phase == ZombieSurvivalPhase.WaitingForPlayers || Phase == ZombieSurvivalPhase.Build )
+				InitializeEconomyIfNeeded( player.PlayerData );
+
+			if ( joiningThisRound && Phase == ZombieSurvivalPhase.Build )
+				GrantBuildPoints( player.PlayerData );
 		}
 
 		ApplyRoleToPlayer( player );
@@ -648,20 +687,22 @@ public sealed class ZombieSurvivalGame : GameObjectSystem, Global.IPlayerEvents,
 			return;
 
 		if (
-			Phase != ZombieSurvivalPhase.WaitingForPlayers
+			!(Phase == ZombieSurvivalPhase.WaitingForPlayers && AllowBuyDuringWaiting)
 			&& Phase != ZombieSurvivalPhase.Build
 			&& !(Phase == ZombieSurvivalPhase.Survival && AllowBuyDuringSurvival)
-)
-				{
-					SendShopNotice( caller, "You cannot buy right now." );
-					return;
-				}
+		)
+		{
+			SendShopNotice( caller, "You cannot buy right now." );
+			return;
+		}
 
 		if ( data.ZombieSurvivalRole != ZombieSurvivalRole.Human )
 		{
 			SendShopNotice( caller, "Zombies cannot buy from the human shop." );
 			return;
 		}
+
+		InitializeEconomyIfNeeded( data );
 
 		var item = ZombieSurvivalShopCatalog.Find( itemId );
 
@@ -686,7 +727,7 @@ public sealed class ZombieSurvivalGame : GameObjectSystem, Global.IPlayerEvents,
 		if ( !GiveShopItemHost( data, item ) )
 		{
 			data.ZombieSurvivalAddCoinsHost( item.Cost );
-			SendShopNotice( caller, $"Could not give {item.DisplayName}. Coins refunded." );
+			SendShopNotice( caller, $"Could not give {item.DisplayName}.\nCoins refunded." );
 			return;
 		}
 

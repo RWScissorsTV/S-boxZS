@@ -27,6 +27,12 @@ public sealed class ZombieSurvivalShopItem
 	public string ResourcePath { get; init; } = "";
 
 	/// <summary>
+	/// Optional visual preview path for Q-menu display.
+	/// For now this can match ResourcePath. Later we can point this at model/icon assets.
+	/// </summary>
+	public string PreviewPath { get; init; } = "";
+
+	/// <summary>
 	/// Optional class name reference for future logic/debugging.
 	/// The current buy system should prefer ResourcePath.
 	/// </summary>
@@ -59,7 +65,8 @@ public static class ZombieSurvivalShopCatalog
 			Category = "Melee",
 			SortOrder = 10,
 			ClassName = "CrowbarWeapon",
-			ResourcePath = "weapons/Crowbar/crowbar.prefab"
+			ResourcePath = "weapons/Crowbar/crowbar.prefab",
+			PreviewPath = "weapons/Crowbar/crowbar.prefab"
 		},
 
 		new()
@@ -72,7 +79,8 @@ public static class ZombieSurvivalShopCatalog
 			Category = "Pistols",
 			SortOrder = 20,
 			ClassName = "GlockWeapon",
-			ResourcePath = "weapons/Glock/glock.prefab"
+			ResourcePath = "weapons/Glock/glock.prefab",
+			PreviewPath = "weapons/Glock/glock.prefab"
 		},
 
 		new()
@@ -85,7 +93,8 @@ public static class ZombieSurvivalShopCatalog
 			Category = "Pistols",
 			SortOrder = 30,
 			ClassName = "Colt1911Weapon",
-			ResourcePath = "weapons/Colt1911/colt1911.prefab"
+			ResourcePath = "weapons/Colt1911/colt1911.prefab",
+			PreviewPath = "weapons/Colt1911/colt1911.prefab"
 		},
 
 		new()
@@ -98,7 +107,8 @@ public static class ZombieSurvivalShopCatalog
 			Category = "SMGs",
 			SortOrder = 40,
 			ClassName = "Mp5Weapon",
-			ResourcePath = "weapons/Mp5/mp5.prefab"
+			ResourcePath = "weapons/Mp5/mp5.prefab",
+			PreviewPath = "weapons/Mp5/mp5.prefab"
 		},
 
 		new()
@@ -111,7 +121,8 @@ public static class ZombieSurvivalShopCatalog
 			Category = "Shotguns",
 			SortOrder = 50,
 			ClassName = "ShotgunWeapon",
-			ResourcePath = "weapons/Shotgun/shotgun.prefab"
+			ResourcePath = "weapons/Shotgun/shotgun.prefab",
+			PreviewPath = "weapons/Shotgun/shotgun.prefab"
 		},
 
 		new()
@@ -124,7 +135,8 @@ public static class ZombieSurvivalShopCatalog
 			Category = "Rifles",
 			SortOrder = 60,
 			ClassName = "M4a1Weapon",
-			ResourcePath = "weapons/M4a1/m4a1.prefab"
+			ResourcePath = "weapons/M4a1/m4a1.prefab",
+			PreviewPath = "weapons/M4a1/m4a1.prefab"
 		},
 
 		new()
@@ -137,7 +149,8 @@ public static class ZombieSurvivalShopCatalog
 			Category = "Rifles",
 			SortOrder = 70,
 			ClassName = "SniperWeapon",
-			ResourcePath = "weapons/Sniper/sniper.prefab"
+			ResourcePath = "weapons/Sniper/sniper.prefab",
+			PreviewPath = "weapons/Sniper/sniper.prefab"
 		},
 
 		new()
@@ -150,7 +163,8 @@ public static class ZombieSurvivalShopCatalog
 			Category = "Explosives",
 			SortOrder = 80,
 			ClassName = "HandGrenadeWeapon",
-			ResourcePath = "weapons/HandGrenade/handgrenade.prefab"
+			ResourcePath = "weapons/HandGrenade/handgrenade.prefab",
+			PreviewPath = "weapons/HandGrenade/handgrenade.prefab"
 		},
 
 		new()
@@ -163,10 +177,11 @@ public static class ZombieSurvivalShopCatalog
 			Category = "Heavy",
 			SortOrder = 90,
 			ClassName = "RpgWeapon",
-			ResourcePath = "weapons/Rpg/rpg.prefab"
+			ResourcePath = "weapons/Rpg/rpg.prefab",
+			PreviewPath = "weapons/Rpg/rpg.prefab"
 		},
 
-		// These are intentionally disabled until we wire ammo purchasing in ZombieSurvivalGame.
+		// Disabled until ammo purchasing is wired.
 		new()
 		{
 			Id = "pistol_ammo",
@@ -177,6 +192,7 @@ public static class ZombieSurvivalShopCatalog
 			Category = "Ammo",
 			SortOrder = 100,
 			ResourcePath = "ammo/pistol",
+			PreviewPath = "ammo/pistol",
 			IsEnabled = false
 		},
 
@@ -190,6 +206,7 @@ public static class ZombieSurvivalShopCatalog
 			Category = "Ammo",
 			SortOrder = 110,
 			ResourcePath = "ammo/smg",
+			PreviewPath = "ammo/smg",
 			IsEnabled = false
 		},
 
@@ -203,6 +220,7 @@ public static class ZombieSurvivalShopCatalog
 			Category = "Ammo",
 			SortOrder = 120,
 			ResourcePath = "ammo/rifle",
+			PreviewPath = "ammo/rifle",
 			IsEnabled = false
 		},
 
@@ -216,6 +234,7 @@ public static class ZombieSurvivalShopCatalog
 			Category = "Ammo",
 			SortOrder = 130,
 			ResourcePath = "ammo/shotgun",
+			PreviewPath = "ammo/shotgun",
 			IsEnabled = false
 		},
 
@@ -230,6 +249,7 @@ public static class ZombieSurvivalShopCatalog
 			Category = "Medical",
 			SortOrder = 140,
 			ResourcePath = "items/medkit",
+			PreviewPath = "items/medkit",
 			IsEnabled = false
 		},
 
@@ -244,6 +264,7 @@ public static class ZombieSurvivalShopCatalog
 			Category = "Tools",
 			SortOrder = 150,
 			ResourcePath = "tools/repair",
+			PreviewPath = "tools/repair",
 			IsEnabled = false
 		}
 	};

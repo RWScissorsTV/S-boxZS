@@ -1,218 +1,166 @@
-.zs-shop-panel {
+.zs-shop-browser {
 	width: 100%;
 	height: 100%;
-
-	padding: 24px;
-
 	flex-direction: column;
-	gap: 18px;
-
-	background-color: rgba( 10, 12, 16, 0.92 );
-	color: white;
-	font-family: Poppins;
-}
-
-.zs-shop-header {
-	width: 100%;
-
-	padding: 18px 20px;
-	border-radius: 14px;
-
-	background-color: rgba( 255, 255, 255, 0.06 );
-	border: 1px solid rgba( 255, 255, 255, 0.08 );
-
-	flex-direction: row;
-	justify-content: space-between;
-	align-items: center;
-	gap: 24px;
-}
-
-.zs-shop-title {
-	font-size: 34px;
-	font-weight: 900;
-	letter-spacing: -0.5px;
-	color: white;
-}
-
-.zs-shop-subtitle {
-	margin-top: 4px;
-
-	font-size: 15px;
-	font-weight: 500;
-	color: rgba( 255, 255, 255, 0.65 );
-}
-
-.zs-shop-wallet {
-	min-width: 120px;
-
-	padding: 10px 14px;
-	border-radius: 12px;
-
-	background-color: rgba( 255, 214, 80, 0.12 );
-	border: 1px solid rgba( 255, 214, 80, 0.24 );
-
-	flex-direction: column;
-	align-items: flex-end;
-}
-
-.zs-shop-wallet-label {
-	font-size: 12px;
-	font-weight: 700;
-	text-transform: uppercase;
-	letter-spacing: 1px;
-	color: rgba( 255, 255, 255, 0.55 );
-}
-
-.zs-shop-wallet-value {
-	font-size: 28px;
-	font-weight: 900;
-	color: #ffd85f;
-}
-
-.zs-shop-blocked {
-	width: 100%;
-	min-height: 220px;
-
-	border-radius: 14px;
-	padding: 28px;
-
-	background-color: rgba( 255, 80, 80, 0.08 );
-	border: 1px solid rgba( 255, 80, 80, 0.2 );
-
-	flex-direction: column;
-	justify-content: center;
-	align-items: center;
 	gap: 8px;
 }
 
-.zs-shop-blocked-title {
-	font-size: 28px;
-	font-weight: 900;
-	color: #ff7676;
-}
-
-.zs-shop-blocked-text {
-	font-size: 16px;
-	font-weight: 500;
-	color: rgba( 255, 255, 255, 0.7 );
-}
-
-.zs-shop-grid {
+.zs-shop-toolbar {
 	width: 100%;
+	flex-direction: row;
+	gap: 8px;
+	align-items: center;
+	flex-shrink: 0;
 
+	TextEntry {
+		flex-grow: 1;
+		height: 38px;
+		border-radius: 6px;
+		background-color: rgba( 255, 255, 255, 0.06 );
+		padding: 0 12px;
+		color: white;
+	}
+}
+
+.zs-shop-coins {
+	height: 38px;
+	min-width: 92px;
+	border-radius: 6px;
+	background-color: rgba( 255, 214, 80, 0.14 );
+	border: 1px solid rgba( 255, 214, 80, 0.25 );
+	flex-direction: row;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+
+	span {
+		font-size: 10px;
+		text-transform: uppercase;
+		letter-spacing: 0.08em;
+		opacity: 0.65;
+	}
+
+	label {
+		font-size: 18px;
+		font-weight: 900;
+		color: #ffd75f;
+	}
+}
+
+.zs-shop-notice {
+	width: 100%;
+	padding: 10px 12px;
+	border-radius: 6px;
+	background-color: rgba( 120, 40, 40, 0.55 );
+	border: 1px solid rgba( 255, 80, 80, 0.3 );
+	flex-direction: column;
+	flex-shrink: 0;
+
+	div {
+		font-weight: 900;
+		color: #ff8585;
+	}
+
+	label {
+		font-size: 12px;
+		opacity: 0.75;
+	}
+}
+
+.zs-shop-tile-grid {
+	width: 100%;
 	flex-direction: row;
 	flex-wrap: wrap;
-	gap: 14px;
+	gap: 5px;
+	overflow-y: scroll;
 }
 
-.zs-shop-item {
-	width: 31.5%;
-	min-height: 132px;
-
-	padding: 16px;
-	border-radius: 14px;
-
-	background-color: rgba( 255, 255, 255, 0.065 );
-	border: 1px solid rgba( 255, 255, 255, 0.08 );
-
-	flex-direction: row;
-	justify-content: space-between;
-	align-items: stretch;
-	gap: 16px;
-
+.zs-shop-tile {
+	width: 86px;
+	height: 86px;
+	border-radius: 6px;
+	background-color: rgba( 255, 255, 255, 0.06 );
+	border: 1px solid transparent;
+	position: relative;
 	cursor: pointer;
-
-	transition: all 0.08s ease-out;
-}
-
-.zs-shop-item:hover {
-	background-color: rgba( 255, 255, 255, 0.11 );
-	border-color: rgba( 255, 255, 255, 0.18 );
-	transform: scale( 1.015 );
-}
-
-.zs-shop-item.can-buy:hover {
-	background-color: rgba( 80, 170, 255, 0.13 );
-	border-color: rgba( 100, 190, 255, 0.4 );
-}
-
-.zs-shop-item.cannot-buy {
-	opacity: 0.45;
-	cursor: default;
-}
-
-.zs-shop-item.cannot-buy:hover {
-	transform: none;
-	background-color: rgba( 255, 255, 255, 0.065 );
-	border-color: rgba( 255, 255, 255, 0.08 );
-}
-
-.zs-shop-item.too-expensive {
-	background-color: rgba( 255, 80, 80, 0.055 );
-	border-color: rgba( 255, 80, 80, 0.12 );
-}
-
-.zs-shop-item-main {
-	flex-grow: 1;
-	flex-shrink: 1;
-
 	flex-direction: column;
-	gap: 6px;
+	overflow: hidden;
+
+	&:hover {
+		background-color: rgba( 80, 160, 255, 0.16 );
+		border-color: rgba( 80, 170, 255, 0.4 );
+	}
+
+	&:active {
+		padding: 2px;
+	}
+
+	&.cannot-buy {
+		opacity: 0.45;
+		cursor: default;
+	}
+
+	&.cannot-buy:hover {
+		background-color: rgba( 255, 255, 255, 0.06 );
+		border-color: transparent;
+	}
+
+	&.too-expensive {
+		background-color: rgba( 120, 40, 40, 0.25 );
+	}
 }
 
-.zs-shop-item-name {
-	font-size: 22px;
-	font-weight: 900;
-	color: white;
-}
+.zs-shop-price {
+	position: absolute;
+	top: 5px;
+	left: 5px;
+	z-index: 2;
 
-.zs-shop-item-description {
-	font-size: 13px;
-	font-weight: 500;
-	line-height: 18px;
-	color: rgba( 255, 255, 255, 0.62 );
-}
+	min-width: 20px;
+	height: 18px;
+	padding: 0 5px;
+	border-radius: 5px;
 
-.zs-shop-item-side {
-	min-width: 74px;
+	background-color: rgba( 0, 0, 0, 0.78 );
+	color: #ffe36a;
 
-	flex-direction: column;
-	justify-content: space-between;
-	align-items: flex-end;
-}
-
-.zs-shop-item-cost {
-	padding: 6px 10px;
-	border-radius: 9px;
-
-	background-color: rgba( 255, 214, 80, 0.13 );
-	border: 1px solid rgba( 255, 214, 80, 0.2 );
-
-	font-size: 20px;
-	font-weight: 900;
-	color: #ffd85f;
-}
-
-.zs-shop-item-type {
 	font-size: 11px;
+	font-weight: 900;
+	align-items: center;
+	justify-content: center;
+}
+
+.zs-shop-preview {
+	flex-grow: 1;
+	width: 100%;
+	align-items: center;
+	justify-content: center;
+}
+
+.zs-shop-preview-placeholder {
+	width: 46px;
+	height: 46px;
+	border-radius: 12px;
+	background-color: rgba( 255, 255, 255, 0.08 );
+	color: rgba( 255, 255, 255, 0.78 );
+	font-size: 18px;
+	font-weight: 900;
+	align-items: center;
+	justify-content: center;
+}
+
+.zs-shop-name {
+	height: 22px;
+	width: 100%;
+	padding: 0 4px;
+	background-color: rgba( 10, 14, 20, 0.72 );
+	color: white;
+	font-size: 10px;
 	font-weight: 800;
-	text-transform: uppercase;
-	letter-spacing: 0.8px;
-	color: rgba( 255, 255, 255, 0.42 );
-}
-
-.zs-shop-item.type-weapon {
-	border-left: 4px solid rgba( 90, 170, 255, 0.75 );
-}
-
-.zs-shop-item.type-ammo {
-	border-left: 4px solid rgba( 255, 214, 80, 0.75 );
-}
-
-.zs-shop-item.type-utility {
-	border-left: 4px solid rgba( 150, 220, 120, 0.75 );
-}
-
-.zs-shop-item.type-medical {
-	border-left: 4px solid rgba( 255, 100, 100, 0.75 );
+	text-align: center;
+	align-items: center;
+	justify-content: center;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	overflow: hidden;
 }

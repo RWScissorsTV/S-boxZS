@@ -6,52 +6,54 @@
 @inherits Panel
 @namespace Sandbox
 
-<div class="zs-shop-panel">
-	<div class="zs-shop-header">
-		<div>
-			<div class="zs-shop-title">@TitleText</div>
-			<div class="zs-shop-subtitle">@SubtitleText</div>
-		</div>
-
-		<div class="zs-shop-wallet">
-			<div class="zs-shop-wallet-label">Coins</div>
-			<div class="zs-shop-wallet-value">@Coins</div>
+<div class="zs-shop-browser">
+	<div class="zs-shop-toolbar">
+		<TextEntry Value:bind=@Filter placeholder="Search..." />
+		<div class="zs-shop-coins">
+			<span>Coins</span>
+			<label>@Coins</label>
 		</div>
 	</div>
 
 	@if ( !CanUseShop )
 	{
-		<div class="zs-shop-blocked">
-			<div class="zs-shop-blocked-title">@BlockedTitle</div>
-			<div class="zs-shop-blocked-text">@BlockedText</div>
+		<div class="zs-shop-notice">
+			<div>@BlockedTitle</div>
+			<label>@BlockedText</label>
 		</div>
 	}
-	else
-	{
-		<div class="zs-shop-grid">
-			@foreach ( var item in Items )
-			{
-				var canBuy = CanBuy( item );
 
-				<div class="@GetItemClass( item, canBuy )" @onclick="@(() => Buy( item ))">
-					<div class="zs-shop-item-main">
-						<div class="zs-shop-item-name">@item.DisplayName</div>
-						<div class="zs-shop-item-description">@item.Description</div>
-					</div>
+	<div class="zs-shop-tile-grid">
+		@foreach ( var item in FilteredItems )
+		{
+			var canBuy = CanBuy( item );
 
-					<div class="zs-shop-item-side">
-						<div class="zs-shop-item-cost">@item.Cost</div>
-						<div class="zs-shop-item-type">@item.Type</div>
-					</div>
+			<div class="@GetItemClass( item, canBuy )" @onclick="@(() => Buy( item ))">
+				<div class="zs-shop-price">@item.Cost</div>
+
+				<div class="zs-shop-preview">
+					@if ( !string.IsNullOrWhiteSpace( item.PreviewPath ) )
+					{
+						<!-- Placeholder text until we wire the same preview renderer as props. -->
+						<div class="zs-shop-preview-placeholder">@GetShortName( item.DisplayName )</div>
+					}
+					else
+					{
+						<div class="zs-shop-preview-placeholder">?</div>
+					}
 				</div>
-			}
-		</div>
-	}
+
+				<div class="zs-shop-name">@item.DisplayName</div>
+			</div>
+		}
+	</div>
 </div>
 
 @code
 {
 	public string Category { get; set; }
+
+	private string Filter { get; set; } = "";
 
 	private Player LocalPlayer => Player.FindLocalPlayer();
 	private PlayerData Data => LocalPlayer?.PlayerData;
@@ -59,26 +61,34 @@
 
 	private int Coins => Data?.ZombieSurvivalCoins ?? 0;
 
-	private string TitleText => string.IsNullOrWhiteSpace( Category )
-		? "Human Shop"
-		: Category;
-
-	private string SubtitleText
+	private ZombieSurvivalShopItem[] Items
 	{
 		get
 		{
-			if ( ZS is null )
-				return "Zombie Survival shop unavailable.";
+			if ( string.IsNullOrWhiteSpace( Category ) )
+				return ZombieSurvivalShopCatalog.All.ToArray();
 
-			return ZS.Phase switch
-			{
-				ZombieSurvivalPhase.WaitingForPlayers => "Buy weapons while waiting for the round to start.",
-				ZombieSurvivalPhase.Build => "Buy weapons before the outbreak starts.",
-				ZombieSurvivalPhase.Survival when ZombieSurvivalGame.AllowBuyDuringSurvival => "Buy quickly. The round is live.",
-				ZombieSurvivalPhase.Survival => "Buying is disabled during survival.",
-				ZombieSurvivalPhase.RoundEnd => "Shop closed until next round.",
-				_ => ""
-			};
+			return ZombieSurvivalShopCatalog.ByCategory( Category ).ToArray();
+		}
+	}
+
+	private ZombieSurvivalShopItem[] FilteredItems
+	{
+		get
+		{
+			var items = Items;
+
+			if ( string.IsNullOrWhiteSpace( Filter ) )
+				return items;
+
+			return items
+				.Where( x =>
+					x.DisplayName.Contains( Filter, StringComparison.OrdinalIgnoreCase )
+					|| x.Description.Contains( Filter, StringComparison.OrdinalIgnoreCase )
+					|| x.Category.Contains( Filter, StringComparison.OrdinalIgnoreCase )
+					|| x.Id.Contains( Filter, StringComparison.OrdinalIgnoreCase )
+				)
+				.ToArray();
 		}
 	}
 
@@ -142,36 +152,26 @@
 		}
 	}
 
-	private ZombieSurvivalShopItem[] Items
-	{
-		get
-		{
-			if ( string.IsNullOrWhiteSpace( Category ) )
-				return ZombieSurvivalShopCatalog.All.ToArray();
-
-			return ZombieSurvivalShopCatalog.ByCategory( Category ).ToArray();
-		}
-	}
-
 	protected override int BuildHash()
 	{
 		var hash = new HashCode();
 
 		hash.Add( ZombieSurvivalGame.Enabled );
 		hash.Add( Category );
+		hash.Add( Filter );
 		hash.Add( Coins );
 		hash.Add( Data?.ZombieSurvivalRole );
 		hash.Add( ZS?.Phase );
 		hash.Add( ZombieSurvivalGame.AllowBuyDuringSurvival );
 
-		foreach ( var item in Items )
+		foreach ( var item in FilteredItems )
 		{
 			hash.Add( item.Id );
 			hash.Add( item.DisplayName );
-			hash.Add( item.Description );
 			hash.Add( item.Cost );
 			hash.Add( item.Type );
 			hash.Add( item.Category );
+			hash.Add( item.PreviewPath );
 		}
 
 		return hash.ToHashCode();
@@ -204,12 +204,10 @@
 
 	private string GetItemClass( ZombieSurvivalShopItem item, bool canBuy )
 	{
-		var classes = "zs-shop-item";
+		var classes = "zs-shop-tile";
 
 		if ( item is null )
 			return classes;
-
-		classes += $" type-{item.Type.ToString().ToLowerInvariant()}";
 
 		if ( canBuy )
 			classes += " can-buy";
@@ -220,5 +218,18 @@
 			classes += " too-expensive";
 
 		return classes;
+	}
+
+	private static string GetShortName( string value )
+	{
+		if ( string.IsNullOrWhiteSpace( value ) )
+			return "?";
+
+		var parts = value.Split( ' ', StringSplitOptions.RemoveEmptyEntries );
+
+		if ( parts.Length == 1 )
+			return parts[0].Length <= 3 ? parts[0] : parts[0][..Math.Min( 3, parts[0].Length )].ToUpperInvariant();
+
+		return string.Join( "", parts.Select( x => char.ToUpperInvariant( x[0] ) ) );
 	}
 }
